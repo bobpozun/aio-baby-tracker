@@ -1,52 +1,94 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
+import { apiClient } from '../utils/apiClient'; // Import the API client
+import { ProfileContext } from '../context/ProfileContext'; // Import ProfileContext
 
-// TODO: Replace with actual type from shared-logic
+// Interface for Note Entry (assuming structure from API)
 interface NoteEntry {
-  id: string;
+  id: string; // Or noteId, depending on backend
   trackerType: string;
-  time: string;
+  time: string; // ISO string format expected
   notes: string;
-  babyId?: string; // Added for future use
+  profileId: string; // Link note to a profile
 }
-
-// TODO: Replace with actual API query
-const placeholderNotes: NoteEntry[] = [
-    { id: 'note1', trackerType: 'Sleep', time: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(), notes: 'Seemed restless during the first hour.' },
-    { id: 'note2', trackerType: 'Diaper', time: new Date(Date.now() - 1000 * 60 * 30).toISOString(), notes: 'Slight rash observed.' },
-    { id: 'note3', trackerType: 'Nursing', time: new Date(Date.now() - 1000 * 60 * 10).toISOString(), notes: 'Fed well on the left side.' },
-    { id: 'note4', trackerType: 'Solids', time: new Date(Date.now() - 1000 * 60 * 120).toISOString(), notes: 'Loved the sweet potato puree!' },
-];
 
 const CentralNotes: React.FC = () => {
   const [allNotes, setAllNotes] = useState<NoteEntry[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(false); // Add loading state
+  const [error, setError] = useState<string | null>(null); // Add error state
+  const profileContext = useContext(ProfileContext); // Get context
+
+  // Handle case where context might be undefined
+  if (!profileContext) {
+    // This should ideally not happen if used within ProfileProvider
+    return <p>Error: Notes component must be used within a ProfileProvider.</p>;
+    // Or return null; or a loading indicator
+  }
+  const { selectedProfileId } = profileContext; // Destructure after checking context exists
 
   useEffect(() => {
-    // Simulate fetching notes - replace with API call later
-    const sortedNotes = placeholderNotes.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime());
-    setAllNotes(sortedNotes);
-  }, []);
+    const fetchNotes = async () => {
+      if (!selectedProfileId) {
+        setAllNotes([]); // Clear notes if no profile is selected
+        return;
+      }
 
+      setIsLoading(true);
+      setError(null);
+      try {
+        // Fetch notes for the selected profile
+        // Assuming endpoint /notes?profileId={selectedProfileId}
+        const fetchedNotes = await apiClient.get<NoteEntry[]>('/notes', {
+          profileId: selectedProfileId,
+        });
+        // Sort notes chronologically (newest first)
+        const sortedNotes = (fetchedNotes || []).sort(
+          (a, b) => new Date(b.time).getTime() - new Date(a.time).getTime()
+        );
+        setAllNotes(sortedNotes);
+      } catch (err: any) {
+        console.error('Failed to fetch notes:', err);
+        setError(err.message || 'Failed to load notes.');
+        setAllNotes([]); // Clear notes on error
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchNotes();
+  }, [selectedProfileId]); // Re-fetch when selectedProfileId changes
 
   return (
     <div>
-      <h2>Central Notes Log</h2>
-      <p>All notes recorded across different trackers, sorted chronologically.</p>
-
-      {/* Add filtering options later */}
-
-      {allNotes.length === 0 ? (
-        <p>No notes recorded yet.</p>
-      ) : (
-        <ul>
-          {allNotes.map((note) => (
-            <li key={note.id}>
-              <strong>[{note.trackerType}]</strong> - {new Date(note.time).toLocaleString()}
-              <p style={{ margin: '5px 0 10px 15px', fontStyle: 'italic' }}>{note.notes}</p>
-              {/* Add link back to the original tracker entry later */}
-            </li>
-          ))}
-        </ul>
-      )}
+      {' '}
+      {/* Outer div */}
+      <h2>Central Notes Log</h2> {/* Title outside section */}
+      <section>
+        {' '}
+        {/* Section for content */}
+        <p>
+          All notes recorded across different trackers, sorted chronologically.
+        </p>
+        {/* Add filtering options later */}
+        {isLoading && <p>Loading notes...</p>}
+        {error && <p style={{ color: 'red' }}>Error: {error}</p>}
+        {!isLoading && !error && allNotes.length === 0 && (
+          <p>No notes recorded for this profile yet.</p>
+        )}
+        {!isLoading && !error && allNotes.length > 0 && (
+          <ul>
+            {allNotes.map((note) => (
+              <li key={note.id}>
+                <strong>[{note.trackerType}]</strong> -{' '}
+                {new Date(note.time).toLocaleString()}
+                <p style={{ margin: '5px 0 10px 15px', fontStyle: 'italic' }}>
+                  {note.notes}
+                </p>
+                {/* Add link back to the original tracker entry later */}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
     </div>
   );
 };

@@ -3,7 +3,6 @@
     "version": "20.7.2"
   },
   "$schema": "./node_modules/nx/schemas/nx-schema.json",
-  "nxCloudId": "67f80352f69bed65f8932e97",
   "plugins": [
     {
       "plugin": "@nx/react-native/plugin",

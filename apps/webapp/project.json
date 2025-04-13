@@ -10,7 +10,14 @@
       "outputs": ["{options.outputPath}"],
       "defaultConfiguration": "production",
       "options": {
-        "outputPath": "dist/apps/webapp"
+        "outputPath": "dist/apps/webapp",
+        "assets": [
+          {
+            "glob": "**/*",
+            "input": "assets",
+            "output": "/assets/"
+          }
+        ]
       },
       "configurations": {
         "development": {

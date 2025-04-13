@@ -1,0 +1,59 @@
+name: Deploy WebApp to S3
+
+on:
+  push:
+    branches:
+      - main # Or your default branch
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write # Required for assuming role via OIDC (alternative to access keys)
+      contents: read # Required to check out the code
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20' # Or your preferred Node.js version
+          cache: 'npm' # Cache npm dependencies
+
+      - name: Install dependencies
+        run: npm ci # Use 'ci' for cleaner installs in CI
+
+      - name: Build webapp
+        run: npx nx build webapp
+        env:
+          # Pass VITE variables needed for the build process
+          AWS_COGNITO_REGION: ${{ secrets.AWS_COGNITO_REGION }}
+          AWS_USER_POOLS_ID: ${{ secrets.AWS_USER_POOLS_ID }}
+          AWS_USER_POOLS_WEB_CLIENT_ID: ${{ secrets.AWS_USER_POOLS_WEB_CLIENT_ID }}
+          API_AIOAPI_ENDPOINT: ${{ secrets.API_AIOAPI_ENDPOINT }}
+          API_AIOAPI_REGION: ${{ secrets.API_AIOAPI_REGION }}
+          AWS_STORAGE_BUCKET: ${{ secrets.AWS_STORAGE_BUCKET }}
+          AWS_STORAGE_REGION: ${{ secrets.AWS_STORAGE_REGION }}
+          # Add any other  variables your build needs
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }} # Region for the S3 bucket/CloudFront
+
+      - name: Deploy static site to S3 bucket
+        run: aws s3 sync ./dist/apps/webapp/ s3://${{ secrets.S3_BUCKET_NAME }} --delete
+        env:
+          # Ensure AWS CLI uses the region configured above if needed, though sync usually infers from bucket location
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+
+      # Optional: Invalidate CloudFront cache
+      # - name: Invalidate CloudFront Distribution
+      #   if: ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID != '' }} # Only run if secret is set
+      #   run: aws cloudfront create-invalidation --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} --paths "/*"
+      #   env:
+      #      AWS_REGION: ${{ secrets.AWS_REGION }} # CloudFront API is global but often best to specify a region

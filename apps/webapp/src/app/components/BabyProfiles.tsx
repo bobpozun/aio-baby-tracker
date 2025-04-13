@@ -1,43 +1,93 @@
 import React, { useState } from 'react';
+import { useProfiles, BabyProfile } from '../context/ProfileContext';
 
-// TODO: Replace with actual type from shared-logic
-interface BabyProfile {
-  id: string;
-  name: string;
-  birthday: string; // YYYY-MM-DD
-}
+// Sub-component for editing a profile inline
+const EditProfileForm: React.FC<{
+  profile: BabyProfile;
+  onSave: (id: string, name: string, birthday: string) => void;
+  onCancel: () => void;
+}> = ({ profile, onSave, onCancel }) => {
+  const [name, setName] = useState(profile.name);
+  const [birthday, setBirthday] = useState(profile.birthday);
+
+  const handleSave = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name || !birthday) return;
+    onSave(profile.id, name, birthday);
+  };
+
+  return (
+    <form
+      onSubmit={handleSave}
+      style={{
+        border: '1px solid #eee',
+        padding: '10px',
+        marginTop: '5px',
+        borderRadius: '4px',
+      }}
+    >
+      <h4>Edit Profile</h4>
+      <div>
+        <label htmlFor={`editName-${profile.id}`}>Name:</label>
+        <input
+          type="text"
+          id={`editName-${profile.id}`}
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          required
+        />
+      </div>
+      <div>
+        <label htmlFor={`editBirthday-${profile.id}`}>Birthday:</label>
+        <input
+          type="date"
+          id={`editBirthday-${profile.id}`}
+          value={birthday}
+          onChange={(e) => setBirthday(e.target.value)}
+          required
+        />
+      </div>
+      <button type="submit" style={{ marginRight: '10px' }}>
+        Save Changes
+      </button>
+      <button type="button" onClick={onCancel}>
+        Cancel
+      </button>
+    </form>
+  );
+};
 
 const BabyProfiles: React.FC = () => {
-  // TODO: Replace with data fetched from API
-  const [profiles, setProfiles] = useState<BabyProfile[]>([
-    { id: '1', name: 'Baby Smith', birthday: '2024-01-15' },
-  ]);
+  const { profiles, addProfile, editProfile, deleteProfile } = useProfiles(); // Use context and deleteProfile
   const [newProfileName, setNewProfileName] = useState('');
   const [newProfileBirthday, setNewProfileBirthday] = useState('');
+  const [editingProfileId, setEditingProfileId] = useState<string | null>(null);
 
-  const handleAddProfile = (e: React.FormEvent) => {
+  const handleAddProfileSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newProfileName || !newProfileBirthday) return;
-
-    const newProfile: BabyProfile = {
-      id: Date.now().toString(), // Replace with proper ID generation
-      name: newProfileName,
-      birthday: newProfileBirthday,
-    };
-
-    console.log('Adding profile (placeholder):', newProfile);
-    // API call to save profile would go here
-    setProfiles([...profiles, newProfile]);
-    // Reset form fields
+    addProfile(newProfileName, newProfileBirthday); // Use context action
     setNewProfileName('');
     setNewProfileBirthday('');
   };
 
+  const handleEditSave = (id: string, name: string, birthday: string) => {
+    editProfile(id, name, birthday); // Use context action
+    setEditingProfileId(null); // Close edit form
+  };
+
+  const handleDeleteClick = (id: string, name: string) => {
+    if (
+      window.confirm(
+        `Are you sure you want to delete the profile for ${name}? This action cannot be undone.`
+      )
+    ) {
+      deleteProfile(id); // Use context action
+    }
+  };
 
   return (
     <div>
       <h2>Baby Profiles</h2>
-
       <section>
         <h3>Current Profiles</h3>
         {profiles.length === 0 ? (
@@ -46,8 +96,43 @@ const BabyProfiles: React.FC = () => {
           <ul>
             {profiles.map((profile) => (
               <li key={profile.id}>
-                <strong>{profile.name}</strong> - Birthday: {profile.birthday}
-                {/* Add Edit/Delete buttons later */}
+                {editingProfileId === profile.id ? (
+                  <EditProfileForm
+                    profile={profile}
+                    onSave={handleEditSave}
+                    onCancel={() => setEditingProfileId(null)}
+                  />
+                ) : (
+                  <>
+                    <strong>{profile.name}</strong> - Birthday:{' '}
+                    {profile.birthday}
+                    <button
+                      onClick={() => setEditingProfileId(profile.id)}
+                      style={{
+                        marginLeft: '10px',
+                        padding: '2px 6px',
+                        fontSize: '0.8em',
+                      }}
+                    >
+                      Edit
+                    </button>
+                    {/* Add delete button */}
+                    <button
+                      onClick={() =>
+                        handleDeleteClick(profile.id, profile.name)
+                      }
+                      style={{
+                        marginLeft: '5px',
+                        padding: '2px 6px',
+                        fontSize: '0.8em',
+                        backgroundColor: '#dc3545',
+                        color: 'white',
+                      }}
+                    >
+                      Delete
+                    </button>
+                  </>
+                )}
               </li>
             ))}
           </ul>
@@ -58,7 +143,7 @@ const BabyProfiles: React.FC = () => {
 
       <section>
         <h3>Add New Profile</h3>
-        <form onSubmit={handleAddProfile}>
+        <form onSubmit={handleAddProfileSubmit}>
           <div>
             <label htmlFor="babyName">Name:</label>
             <input

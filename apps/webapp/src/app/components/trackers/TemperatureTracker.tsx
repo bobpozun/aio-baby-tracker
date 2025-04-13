@@ -1,108 +1,283 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { apiClient } from '../../utils/apiClient';
+import { useTrackerLogic } from '../../hooks/useTrackerLogic'; // Import the custom hook
+// Import date utils
+import {
+  getCurrentDateTimeLocal,
+  formatDateTimeLocalInput,
+} from '../../utils/dateUtils';
 
+// Interface remains specific to this tracker
 interface TemperatureEntry {
-  id: string;
+  entryId: string;
   time: string;
   temperature: number;
   unit: 'C' | 'F';
   notes?: string;
-  babyId?: string; // Added for future use
+  babyId: string;
 }
 
+// Define the structure for the data part of a new entry
+type NewTemperatureEntryData = Omit<TemperatureEntry, 'entryId' | 'babyId'>;
+
 const TemperatureTracker: React.FC = () => {
-  const [entries, setEntries] = useState<TemperatureEntry[]>([]);
-  const [time, setTime] = useState('');
+  // Use the custom hook for shared logic
+  const {
+    entries,
+    isLoading, // Combined loading state from hook
+    error: displayError, // Combined error state from hook
+    editingEntryId,
+    setEditingEntryId,
+    selectedProfile, // Get the actual profile object
+    profileName,
+    fetchEntries, // Get fetch function from hook
+    handleDeleteEntry, // Get delete function from hook
+  } = useTrackerLogic<TemperatureEntry>({ trackerType: 'temperature' });
+
+  // Keep component-specific form state
+  const [time, setTime] = useState(getCurrentDateTimeLocal());
   const [temperature, setTemperature] = useState('');
   const [unit, setUnit] = useState<'C' | 'F'>('C');
   const [notes, setNotes] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false); // Local state for submit loading
+  const [formError, setFormError] = useState<string | null>(null); // Local error state specifically for the form
 
-  const handleAddEntry = (e: React.FormEvent) => {
+  // Function to reset form fields
+  const resetForm = useCallback(() => {
+    console.log('TemperatureTracker: resetForm called');
+    setTime(getCurrentDateTimeLocal());
+    setTemperature('');
+    setUnit('C');
+    setNotes('');
+    setEditingEntryId(null); // Use setter from hook
+    setFormError(null);
+  }, [setEditingEntryId]);
+
+  // Effect to reset form when selected profile changes (after loading)
+   useEffect(() => {
+    if (!isLoading && selectedProfile) {
+        resetForm();
+    }
+     if (!isLoading && !selectedProfile) {
+        resetForm();
+    }
+  }, [selectedProfile?.id, isLoading, resetForm]);
+
+   // Effect to fetch entries when selected profile changes (after loading)
+   useEffect(() => {
+    if (selectedProfile && !isLoading) {
+      console.log(`TemperatureTracker: Fetching entries for profile ${selectedProfile.id}`);
+      fetchEntries();
+    }
+  }, [selectedProfile?.id, isLoading, fetchEntries]);
+
+
+  // Function to set the form state for editing an entry
+  const handleEditClick = (entry: TemperatureEntry) => {
+    setEditingEntryId(entry.entryId); // Use setter from hook
+    setTime(formatDateTimeLocalInput(entry.time));
+    setTemperature(entry.temperature.toString());
+    setUnit(entry.unit);
+    setNotes(entry.notes || '');
+    setFormError(null);
+  };
+
+  // Component-specific submit logic
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!time || !temperature) return;
+    if (!selectedProfile || !time || !temperature) return; // Check selectedProfile from hook
+    setFormError(null);
 
-    const newEntry: TemperatureEntry = {
-      id: Date.now().toString(),
+    const entryData: NewTemperatureEntryData = {
       time: new Date(time).toISOString(),
       temperature: parseFloat(temperature),
       unit: unit,
       notes: notes || undefined,
     };
 
-    console.log('Adding temperature entry (placeholder):', newEntry);
-    // API call to save entry would go here
-    setEntries(prev => [...prev, newEntry].sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime()));
-    // Reset form fields
-    setTime('');
-    setTemperature('');
-    setUnit('C');
-    setNotes('');
+    setIsSubmitting(true);
+
+    try {
+      const endpoint = `/profiles/${selectedProfile.id}/trackers/temperature`;
+      if (editingEntryId) {
+        await apiClient.put<TemperatureEntry>(`${endpoint}/${editingEntryId}`, entryData);
+        console.log(`Updated temperature entry ${editingEntryId}`);
+      } else {
+        await apiClient.post<TemperatureEntry>(endpoint, entryData);
+        console.log('Added new temperature entry');
+      }
+      await fetchEntries(); // Refetch using function from hook
+      resetForm();
+    } catch (err: any) {
+      const action = editingEntryId ? 'update' : 'save';
+      console.error(`Failed to ${action} temperature entry:`, err);
+      setFormError(err.message || `Failed to ${action} temperature entry.`);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
+  // Use combined loading state from hook for initial loading display
+  if (isLoading && !selectedProfile) {
+    return <div>Loading profile data...</div>;
+  }
+
+  // Use combined error state from hook for context errors
+  if (displayError && !selectedProfile) {
+     return <div style={{ color: 'red' }}>Error loading profiles: {displayError}</div>;
+  }
 
   return (
     <div>
-      <h2>Temperature Tracker</h2>
+      <h2>
+        Temperature Tracker {profileName ? `for ${profileName}` : '(Select Profile...)'}
+      </h2>
 
-      <section>
-        <h3>Add New Temperature Reading</h3>
-        <form onSubmit={handleAddEntry}>
-          <div>
-            <label htmlFor="tempTime">Time:</label>
-            <input
-              type="datetime-local"
-              id="tempTime"
-              value={time}
-              onChange={(e) => setTime(e.target.value)}
-              required
-            />
-          </div>
-          <div>
-            <label htmlFor="tempValue">Temperature:</label>
-            <input
-              type="number"
-              id="tempValue"
-              step="0.1" // Allow decimal for temperature
-              value={temperature}
-              onChange={(e) => setTemperature(e.target.value)}
-              required
-            />
-            <select value={unit} onChange={(e) => setUnit(e.target.value as 'C' | 'F')}>
-              <option value="C">°C</option>
-              <option value="F">°F</option>
-            </select>
-          </div>
-          <div>
-            <label htmlFor="tempNotes">Notes:</label>
-            <textarea
-              id="tempNotes"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-            />
-          </div>
-          <button type="submit">Add Temperature Entry</button>
-        </form>
-      </section>
+      {/* Display form-specific errors */}
+      {formError && <p style={{ color: 'red' }}>Error: {formError}</p>}
+      {/* Display context/fetch errors if not form-related */}
+      {displayError && !formError && <p style={{ color: 'red' }}>Error: {displayError}</p>}
 
-      <hr />
+      {/* Render sections only if a profile is selected */}
+      {selectedProfile ? (
+        <>
+          <section>
+            <h3>
+              {editingEntryId
+                ? 'Edit Temperature Reading'
+                : 'Add New Temperature Reading'}
+            </h3>
+            <form onSubmit={handleSubmit}>
+              <div>
+                <label htmlFor="tempTime">Time:</label>
+                <input
+                  type="datetime-local"
+                  id="tempTime"
+                  value={time}
+                  onChange={(e) => setTime(e.target.value)}
+                  required
+                />
+              </div>
+              <div>
+                <label htmlFor="tempValue">Temperature:</label>
+                <input
+                  type="number"
+                  id="tempValue"
+                  step="0.1" // Allow decimal for temperature
+                  value={temperature}
+                  onChange={(e) => setTemperature(e.target.value)}
+                  required
+                />
+                <select
+                  value={unit}
+                  onChange={(e) => setUnit(e.target.value as 'C' | 'F')}
+                >
+                  <option value="C">°C</option>
+                  <option value="F">°F</option>
+                </select>
+              </div>
+              <div>
+                <label htmlFor="tempNotes">Notes:</label>
+                <textarea
+                  id="tempNotes"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                />
+              </div>
+              <button type="submit" disabled={isSubmitting || !selectedProfile}>
+                {isSubmitting
+                  ? editingEntryId
+                    ? 'Updating...'
+                    : 'Adding...'
+                  : editingEntryId
+                  ? 'Update Entry'
+                  : 'Add Temperature Entry'}
+              </button>
+              {editingEntryId && (
+                <button
+                  type="button"
+                  onClick={resetForm}
+                  disabled={isSubmitting}
+                  style={{ marginLeft: '10px' }}
+                >
+                  Cancel Edit
+                </button>
+              )}
+            </form>
+          </section>
 
-      <section>
-        <h3>Temperature Log</h3>
-        {entries.length === 0 ? (
-          <p>No temperature readings recorded yet.</p>
-        ) : (
-          <ul>
-            {entries.map((entry) => (
-              <li key={entry.id}>
-                <strong>{entry.temperature}°{entry.unit}</strong>
-                <br />
-                Time: {new Date(entry.time).toLocaleString()}
-                {entry.notes && <><br />Notes: {entry.notes}</>}
-                {/* Add Edit/Delete buttons later */}
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+          <hr />
+
+          <section>
+            <h3>
+              Temperature Log {profileName ? `for ${profileName}` : ''}
+            </h3>
+            {/* Use combined isLoading for log loading state */}
+            {isLoading && entries.length === 0 ? (
+              <p>Loading log...</p>
+            ) : entries.length === 0 ? (
+              <p>No temperature readings recorded for this profile yet.</p>
+            ) : (
+              <ul>
+                {entries.map((entry) => {
+                    const entryDate = new Date(entry.time);
+                    const isDateValid = !isNaN(entryDate.getTime());
+                    return (
+                      <li key={entry.entryId}>
+                        <strong>
+                          {entry.temperature}°{entry.unit}
+                        </strong>
+                        <br />
+                        Time: {isDateValid ? entryDate.toLocaleString() : 'Invalid Date'}
+                        {entry.notes && (
+                          <>
+                            <br />
+                            Notes: {entry.notes}
+                          </>
+                        )}
+                        <div style={{ marginTop: '5px' }}>
+                          <button
+                            onClick={() => handleEditClick(entry)}
+                            disabled={isLoading || isSubmitting || !!editingEntryId}
+                            style={{
+                              marginRight: '10px',
+                              background: 'none',
+                              border: 'none',
+                              cursor: 'pointer',
+                              padding: '2px 5px',
+                              color: 'var(--primary-color)',
+                            }}
+                            title="Edit entry"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleDeleteEntry(entry.entryId)}
+                            disabled={isLoading || isSubmitting || !!editingEntryId}
+                            style={{
+                              marginLeft: '10px',
+                              color: 'red',
+                              background: 'none',
+                              border: 'none',
+                              cursor: 'pointer',
+                              padding: '2px 5px',
+                            }}
+                            title="Delete entry"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </li>
+                    );
+                })}
+              </ul>
+            )}
+          </section>
+        </>
+      ) : (
+         // Message when no profile is selected (after loading is complete)
+         <p style={{ color: 'orange' }}>Please select a baby profile first.</p>
+      )}
     </div>
   );
 };

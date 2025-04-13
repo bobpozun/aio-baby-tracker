@@ -1,0 +1,118 @@
+[
+  {
+    "id": "c1",
+    "week": 8,
+    "text": "Schedule first prenatal appointment",
+    "completed": false
+  },
+  {
+    "id": "c2",
+    "week": 10,
+    "text": "Consider genetic screening options (NIPT, etc.)",
+    "completed": false
+  },
+  {
+    "id": "c3",
+    "week": 12,
+    "text": "Start thinking about baby names",
+    "completed": false
+  },
+  {
+    "id": "c4",
+    "week": 14,
+    "text": "Plan how to announce your pregnancy",
+    "completed": false
+  },
+  {
+    "id": "c5",
+    "week": 16,
+    "text": "Feel baby's first movements (quickening)?",
+    "completed": false
+  },
+  {
+    "id": "c6",
+    "week": 18,
+    "text": "Schedule mid-pregnancy ultrasound (anatomy scan)",
+    "completed": false
+  },
+  {
+    "id": "c7",
+    "week": 20,
+    "text": "Start researching childcare options if needed",
+    "completed": false
+  },
+  {
+    "id": "c8",
+    "week": 22,
+    "text": "Look into childbirth education classes",
+    "completed": false
+  },
+  {
+    "id": "c9",
+    "week": 24,
+    "text": "Take glucose challenge test for gestational diabetes",
+    "completed": false
+  },
+  {
+    "id": "c10",
+    "week": 26,
+    "text": "Start planning the nursery setup",
+    "completed": false
+  },
+  {
+    "id": "c11",
+    "week": 28,
+    "text": "Discuss birth plan preferences with provider",
+    "completed": false
+  },
+  { "id": "c12", "week": 28, "text": "Get Tdap vaccine", "completed": false },
+  {
+    "id": "c13",
+    "week": 30,
+    "text": "Monitor baby's movements (kick counts)",
+    "completed": false
+  },
+  {
+    "id": "c14",
+    "week": 32,
+    "text": "Finalize childcare arrangements",
+    "completed": false
+  },
+  {
+    "id": "c15",
+    "week": 34,
+    "text": "Pack your hospital bag",
+    "completed": false
+  },
+  {
+    "id": "c16",
+    "week": 35,
+    "text": "Learn signs of labor",
+    "completed": false
+  },
+  {
+    "id": "c17",
+    "week": 36,
+    "text": "Get Group B Strep (GBS) test",
+    "completed": false
+  },
+  {
+    "id": "c18",
+    "week": 37,
+    "text": "Install baby's car seat",
+    "completed": false
+  },
+  {
+    "id": "c19",
+    "week": 38,
+    "text": "Arrange for help after baby arrives",
+    "completed": false
+  },
+  { "id": "c20", "week": 39, "text": "Rest and wait!", "completed": false },
+  {
+    "id": "c21",
+    "week": 40,
+    "text": "Discuss options if past due date",
+    "completed": false
+  }
+]
