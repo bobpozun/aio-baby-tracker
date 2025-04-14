@@ -223,10 +223,10 @@ export class AioBabyTrackerStack extends cdk.Stack {
       handler: apiLambda,
       proxy: false, // Set proxy to false to define specific integrations/authorizers
       defaultCorsPreflightOptions: {
-        // Explicitly allow the CloudFront distribution domain
-        allowOrigins: [`https://${distribution.distributionDomainName}`],
+        // Allow all origins for testing purposes - restrict in production!
+        allowOrigins: apigateway.Cors.ALL_ORIGINS,
         allowMethods: apigateway.Cors.ALL_METHODS, // Keep broad for now
-        allowHeaders: apigateway.Cors.DEFAULT_HEADERS.concat(['Authorization']),
+        allowHeaders: apigateway.Cors.DEFAULT_HEADERS.concat(['Authorization']), // Ensure Authorization header is allowed
       },
       // Set default authorizer for all methods (can be overridden per method)
       defaultMethodOptions: {
@@ -249,30 +249,46 @@ export class AioBabyTrackerStack extends cdk.Stack {
 
     // /profiles
     const profilesResource = api.root.addResource('profiles');
-    profilesResource.addMethod('GET'); // Uses default authorizer
-    profilesResource.addMethod('POST'); // Uses default authorizer
+    profilesResource.addMethod('GET', undefined, { // Explicitly define method options
+      authorizationType: apigateway.AuthorizationType.COGNITO,
+      authorizer: authorizer,
+    });
+    profilesResource.addMethod('POST', undefined, { // Explicitly define method options
+      authorizationType: apigateway.AuthorizationType.COGNITO,
+      authorizer: authorizer,
+    });
 
     // /profiles/{profileId}
     const profileIdResource = profilesResource.addResource('{profileId}');
-    profileIdResource.addMethod('PUT'); // Uses default authorizer
-    profileIdResource.addMethod('DELETE'); // Uses default authorizer
+    // These should still inherit the default, but we can make them explicit too if needed
+    profileIdResource.addMethod('PUT');
+    profileIdResource.addMethod('DELETE');
 
     // /profiles/{profileId}/trackers/{trackerType}
+    // Assuming these inherit correctly for now, focus on /profiles first
     const trackersResource = profileIdResource.addResource('trackers');
     const trackerTypeResource = trackersResource.addResource('{trackerType}');
-    trackerTypeResource.addMethod('GET'); // Uses default authorizer
-    trackerTypeResource.addMethod('POST'); // Uses default authorizer
-    // TODO: Add PUT/DELETE for tracker entries later if needed
+    trackerTypeResource.addMethod('GET');
+    trackerTypeResource.addMethod('POST');
+
+    // Add DELETE method for tracker entries
+    const trackerEntryIdResource = trackerTypeResource.addResource('{entryId}');
+    trackerEntryIdResource.addMethod('DELETE', undefined, {
+        authorizationType: apigateway.AuthorizationType.COGNITO,
+        authorizer: authorizer,
+    });
 
     // /checklist/status
+    // Assuming these inherit correctly for now
     const checklistResource = api.root.addResource('checklist');
     const checklistStatusResource = checklistResource.addResource('status');
-    checklistStatusResource.addMethod('GET'); // Uses default authorizer
+    checklistStatusResource.addMethod('GET');
 
     // /checklist/status/{itemId}
+    // Assuming these inherit correctly for now
     const checklistItemIdResource =
       checklistStatusResource.addResource('{itemId}');
-    checklistItemIdResource.addMethod('PUT'); // Uses default authorizer
+    checklistItemIdResource.addMethod('PUT');
 
     // TODO: Add routes for custom checklist items if implementing that feature
 

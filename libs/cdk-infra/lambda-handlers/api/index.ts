@@ -239,6 +239,43 @@ export const handler: Handler = async (
       });
       await docClient.send(command);
       return createApiResponse(201, newItem); // Return the created entry
+    } else if (
+      path === '/profiles/{profileId}/trackers/{trackerType}/{entryId}' &&
+      httpMethod === 'DELETE'
+    ) {
+      const babyId = pathParameters?.profileId;
+      const trackerType = pathParameters?.trackerType;
+      const entryId = pathParameters?.entryId;
+      console.log(`ROUTE: DELETE /profiles/${babyId}/trackers/${trackerType}/${entryId}`);
+
+      if (!babyId || !trackerType || !entryId) {
+        return createApiResponse(400, { message: 'Missing parameters' });
+      }
+
+      // --- Verify Ownership (same as GET) ---
+      try {
+        const getProfileCommand = new GetCommand({
+          TableName: babiesTable,
+          Key: { userId: userId, babyId: babyId },
+        });
+        const profileResult = await docClient.send(getProfileCommand);
+        if (!profileResult.Item) {
+          console.warn(`User ${userId} does not own profile ${babyId} or it does not exist.`);
+          return createApiResponse(404, { message: 'Profile not found or access denied.' });
+        }
+        console.log(`User ${userId} verified ownership of profile ${babyId}.`);
+      } catch (verifyError: any) {
+        console.error(`Error verifying profile ownership for ${babyId}:`, verifyError);
+        return createApiResponse(500, { message: 'Internal Server Error during ownership verification.' });
+      }
+      // --- End Ownership Verification ---
+
+      const command = new DeleteCommand({
+        TableName: trackerEntriesTable,
+        Key: { babyId: babyId, entryId: entryId },
+      });
+      await docClient.send(command);
+      return createApiResponse(200, { message: 'Tracker entry deleted' });
     }
 
     // --- Checklist Routes ---

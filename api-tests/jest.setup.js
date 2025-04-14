@@ -1,4 +1,4 @@
-require('dotenv').config({ path: '../.env.local' });
+require('dotenv').config({ path: '.env' });
 
 // Verify required environment variables are set
 const requiredEnvVars = [
@@ -7,7 +7,9 @@ const requiredEnvVars = [
   'API_NAME',
   'API_ENDPOINT',
   'API_REGION',
-  'COGNITO_REGION'
+  'COGNITO_REGION',
+  'TEST_USER_EMAIL',
+  'TEST_USER_PASSWORD'
 ];
 
 for (const envVar of requiredEnvVars) {
