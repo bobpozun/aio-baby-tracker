@@ -85,3 +85,5 @@ yarn-error.log
 
 vite.config.*.timestamp*
 vitest.config.*.timestamp*
+
+repomix-output.xml

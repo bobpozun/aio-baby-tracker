@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { apiClient } from '../../utils/apiClient';
-import { useTrackerLogic } from '../../hooks/useTrackerLogic'; // Import the custom hook
+import { useTrackerLogic } from '../../hooks/useTrackerLogic';
 // Import date utils
 import {
   getCurrentDateTimeLocal,
@@ -31,6 +31,7 @@ const DiaperTracker: React.FC = () => {
     profileName,
     fetchEntries, // Get fetch function from hook
     handleDeleteEntry, // Get delete function from hook
+    hasFetchedEmptyData,
   } = useTrackerLogic<DiaperEntry>({ trackerType: 'diaper' });
 
   // Keep component-specific form state
@@ -62,11 +63,11 @@ const DiaperTracker: React.FC = () => {
 
    // Effect to fetch entries when selected profile changes (after loading)
    useEffect(() => {
-    if (selectedProfile && !isLoading) {
+    if (selectedProfile && !isLoading && !hasFetchedEmptyData) {
       console.log(`DiaperTracker: Fetching entries for profile ${selectedProfile.id}`);
       fetchEntries();
     }
-  }, [selectedProfile?.id, isLoading, fetchEntries]);
+  }, [selectedProfile?.id, isLoading, fetchEntries, hasFetchedEmptyData]);
 
 
   // Function to set the form state for editing an entry

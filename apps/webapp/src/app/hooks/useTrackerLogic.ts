@@ -27,6 +27,7 @@ interface UseTrackerLogicReturn<T extends BaseTrackerEntry> {
   profileName: string | undefined;
   fetchEntries: () => Promise<void>;
   handleDeleteEntry: (entryId: string) => Promise<void>;
+  hasFetchedEmptyData: boolean;
   // Add generic add/update handlers later if needed
 }
 
@@ -44,6 +45,11 @@ export function useTrackerLogic<T extends BaseTrackerEntry>({ // Use BaseTracker
   const [isLoadingEntries, setIsLoadingEntries] = useState<boolean>(false); // Local loading for fetching entries
   const [localError, setLocalError] = useState<string | null>(null); // Local error for component actions
   const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
+  const [hasFetchedEmptyData, setHasFetchedEmptyData] = useState<boolean>(false);
+
+  useEffect(() => {
+    setHasFetchedEmptyData(false);
+  }, [selectedProfileId]);
 
   const fetchEntries = useCallback(async () => {
     if (!selectedProfileId || isContextLoading) {
@@ -66,6 +72,9 @@ export function useTrackerLogic<T extends BaseTrackerEntry>({ // Use BaseTracker
       });
 
       setEntries(sortedEntries);
+      if (sortedEntries.length === 0) {
+        setHasFetchedEmptyData(true);
+      }
     } catch (err: any) {
       console.error(`Failed to fetch ${trackerType} entries:`, err);
       setLocalError(err.message || `Failed to load ${trackerType} entries.`);
@@ -116,5 +125,6 @@ export function useTrackerLogic<T extends BaseTrackerEntry>({ // Use BaseTracker
     profileName,
     fetchEntries,
     handleDeleteEntry,
+    hasFetchedEmptyData,
   };
 }

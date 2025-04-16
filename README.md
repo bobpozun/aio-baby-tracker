@@ -65,26 +65,29 @@ The following scripts are available in the root `package.json`:
 - `yarn cdk:diff`: Compares the deployed stack(s) with the current CDK code (runs `npx cdk diff` from root).
 - `yarn lint`: Runs ESLint on all projects (`nx run-many --target=lint`).
 - `yarn test`: Runs tests (Vitest) on all projects (`nx run-many --target=test`).
- - `yarn format`: Formats all project files using Prettier (`prettier --write .`).
- - `yarn graph`: Opens the Nx project dependency graph viewer (`nx graph`).
+- `yarn format`: Formats all project files using Prettier (`prettier --write .`).
+- `yarn graph`: Opens the Nx project dependency graph viewer (`nx graph`).
+- `yarn repomix`: Packages the entire repo into one file for passing to an AI model
 
- ## Code Formatting
+## Code Formatting
 
- This project uses [Prettier](https://prettier.io/) for consistent code formatting.
+This project uses [Prettier](https://prettier.io/) for consistent code formatting.
 
- - **Configuration:** Rules are defined in `.prettierrc.json` at the project root.
- - **VS Code Integration:** The workspace settings in `.vscode/settings.json` configure VS Code to automatically format files on save using the project's Prettier configuration. Ensure you have the [Prettier - Code formatter](https://marketplace.visualstudio.com/items?itemName=esbenp.prettier-vscode) extension installed.
- - **Manual Formatting:** You can format the entire project manually by running `yarn format`.
+- **Configuration:** Rules are defined in `.prettierrc.json` at the project root.
+- **VS Code Integration:** The workspace settings in `.vscode/settings.json` configure VS Code to automatically format files on save using the project's Prettier configuration. Ensure you have the [Prettier - Code formatter](https://marketplace.visualstudio.com/items?itemName=esbenp.prettier-vscode) extension installed.
+- **Manual Formatting:** You can format the entire project manually by running `yarn format`.
 
- ## Development Workflow
+## Development Workflow
 
 1.  **Run Web App:**
+
     ```bash
     yarn start:web
     ```
+
     This will start the Vite development server, typically on `http://localhost:4200` or `http://localhost:5173`.
 
-3.  **Mobile Development:** (Requires React Native development environment setup - see React Native documentation)
+2.  **Mobile Development:** (Requires React Native development environment setup - see React Native documentation)
     - Run `yarn start:mobile:ios` or `yarn start:mobile:android`.
 
 ## Deployment

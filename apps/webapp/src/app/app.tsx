@@ -1,6 +1,6 @@
 import React from 'react';
 import { Route, Routes, Link, useNavigate } from 'react-router-dom'; // Import useNavigate
-import { Authenticator, useAuthenticator, Button } from '@aws-amplify/ui-react';
+import { Authenticator, Button } from '@aws-amplify/ui-react';
 import '@aws-amplify/ui-react/styles.css';
 import { useProfiles } from './context/ProfileContext'; // Import useProfiles
 
@@ -357,10 +357,7 @@ const Home = ({ user, signOut }: AppContentProps) => {
         <p>Welcome, {user?.signInDetails?.loginId || 'User'}!</p>
         {/* Logo removed from Home page */}
         {signOut && (
-          <Button
-            onClick={signOut}
-            style={{ display: 'block', margin: '20px auto 0 auto' }}
-          >
+          <Button onClick={signOut} style={{ display: 'block', margin: '20px auto 0 auto' }}>
             Sign Out
           </Button>
         )}
@@ -414,13 +411,12 @@ const ProfileSelector: React.FC = () => {
   const { profiles, selectedProfileId, selectProfile } = useProfiles();
   const navigate = useNavigate(); // Hook for navigation
 
-  const handleSelectionChange = (
-    event: React.ChangeEvent<HTMLSelectElement>
-  ) => {
+  const handleSelectionChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     const value = event.target.value;
     if (value === 'add_new') {
       navigate('/profiles'); // Navigate to profile management page
-    } else if (value) { // Ensure a profile was actually selected (not the disabled placeholder)
+    } else if (value) {
+      // Ensure a profile was actually selected (not the disabled placeholder)
       selectProfile(value); // Select the chosen profile ID
     }
   };
@@ -453,10 +449,7 @@ const ProfileSelector: React.FC = () => {
             <option value="" disabled>
               -- No profiles yet --
             </option>
-            <option
-              value="add_new"
-              style={{ fontStyle: 'italic', color: '#555' }}
-            >
+            <option value="add_new" style={{ fontStyle: 'italic', color: '#555' }}>
               + Add Profile
             </option>
           </>
@@ -578,10 +571,7 @@ function AppContent({ user, signOut }: AppContentProps) {
             <Route path="/trackers/diaper" element={<DiaperTracker />} />
             <Route path="/trackers/medicine" element={<MedicineTracker />} />
             <Route path="/trackers/growth" element={<GrowthTracker />} />
-            <Route
-              path="/trackers/temperature"
-              element={<TemperatureTracker />}
-            />
+            <Route path="/trackers/temperature" element={<TemperatureTracker />} />
             <Route path="/trackers/potty" element={<PottyTracker />} />
             <Route path="/notes" element={<CentralNotes />} />
             <Route path="/reports" element={<ReportsDashboard />} />

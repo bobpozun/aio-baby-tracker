@@ -33,18 +33,17 @@ const BottleTracker: React.FC = () => {
     profileName,
     fetchEntries, // Get fetch function from hook
     handleDeleteEntry, // Get delete function from hook
+    hasFetchedEmptyData,
   } = useTrackerLogic<BottleEntry>({ trackerType: 'bottle' });
 
   // Keep component-specific form state
   const [time, setTime] = useState(getCurrentDateTimeLocal());
   const [amount, setAmount] = useState('');
   const [unit, setUnit] = useState<'ml' | 'oz'>('ml');
-  const [type, setType] = useState<'formula' | 'breast_milk' | 'other'>(
-    'formula'
-  );
-  const [notes, setNotes] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false); // Local state for submit loading
-  const [formError, setFormError] = useState<string | null>(null); // Local error state specifically for the form
+const [type, setType] = useState<'formula' | 'breast_milk' | 'other'>('formula');
+const [notes, setNotes] = useState('');
+const [isSubmitting, setIsSubmitting] = useState(false);
+const [formError, setFormError] = useState<string | null>(null);
 
   // Function to reset form fields
   const resetForm = useCallback(() => {
@@ -70,11 +69,11 @@ const BottleTracker: React.FC = () => {
 
    // Effect to fetch entries when selected profile changes (after loading)
    useEffect(() => {
-    if (selectedProfile && !isLoading) {
+    if (selectedProfile && !isLoading && !hasFetchedEmptyData) {
       console.log(`BottleTracker: Fetching entries for profile ${selectedProfile.id}`);
       fetchEntries();
     }
-  }, [selectedProfile?.id, isLoading, fetchEntries]);
+  }, [selectedProfile?.id, isLoading, fetchEntries, hasFetchedEmptyData]);
 
 
   // Function to set the form state for editing an entry
@@ -217,7 +216,7 @@ const BottleTracker: React.FC = () => {
                   type="button"
                   onClick={resetForm}
                   disabled={isSubmitting}
-                  style={{ marginLeft: '10px' }}
+                  style={{ marginLeft: 10 }}
                 >
                   Cancel Edit
                 </button>
@@ -247,7 +246,7 @@ const BottleTracker: React.FC = () => {
                       <li key={entry.entryId}>
                         <strong>
                           {entry.amount} {entry.unit}
-                        </strong>{' '}
+                        </strong>
                         ({formattedType}) {/* Use safe formatted type */}
                         <br />
                         Time: {isDateValid ? entryDate.toLocaleString() : 'Invalid Date'}
@@ -257,19 +256,19 @@ const BottleTracker: React.FC = () => {
                             Notes: {entry.notes}
                           </>
                         )}
-                        <div style={{ marginTop: '5px' }}>
+                        <div style={{ marginTop: 5 }}>
                           <button
                             onClick={() => handleEditClick(entry)}
                             disabled={isLoading || isSubmitting || !!editingEntryId}
                             style={{
-                              marginRight: '10px',
+                              marginRight: 10,
                               background: 'none',
                               border: 'none',
-                              cursor: 'pointer',
-                              padding: '2px 5px',
-                              color: 'var(--primary-color)',
-                            }}
-                            title="Edit entry"
+                            cursor: 'pointer',
+                            padding: '2px 5px',
+                            color: 'var(--primary-color)',
+                          }}
+                          title="Edit entry"
                           >
                             Edit
                           </button>
@@ -277,12 +276,12 @@ const BottleTracker: React.FC = () => {
                             onClick={() => handleDeleteEntry(entry.entryId)}
                             disabled={isLoading || isSubmitting || !!editingEntryId}
                             style={{
-                              marginLeft: '10px',
+                              marginLeft: 10,
                               color: 'red',
                               background: 'none',
                               border: 'none',
-                              cursor: 'pointer',
-                              padding: '2px 5px',
+                            cursor: 'pointer',
+                            padding: '2px 5px',
                             }}
                             title="Delete entry"
                           >

@@ -35,6 +35,7 @@ const SolidsTracker: React.FC = () => {
     profileName,
     fetchEntries, // Get fetch function from hook
     handleDeleteEntry: handleDeleteEntryFromHook, // Get delete function from hook (rename to avoid conflict)
+    hasFetchedEmptyData,
   } = useTrackerLogic<SolidsEntry>({ trackerType: 'solids' });
 
   // Keep component-specific form state
@@ -105,11 +106,11 @@ const SolidsTracker: React.FC = () => {
 
    // Effect to fetch entries when selected profile changes (after loading)
    useEffect(() => {
-    if (selectedProfile && !isLoading) {
+    if (selectedProfile && !isLoading && !hasFetchedEmptyData) {
       console.log(`SolidsTracker: Fetching entries for profile ${selectedProfile.id}`);
       fetchEntries();
     }
-  }, [selectedProfile?.id, isLoading, fetchEntries]);
+  }, [selectedProfile?.id, isLoading, fetchEntries, hasFetchedEmptyData]);
 
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {

@@ -79,6 +79,7 @@
     "test:api": "jest --config ./api-tests/jest.config.js --rootDir ./api-tests --runInBand",
     "graph": "nx graph",
     "mcp:start:browser-tools-server": "npx @agentdeskai/browser-tools-server@latest",
-    "mcp:start:browser-tools-mcp": "npx @agentdeskai/browser-tools-mcp@latest"
+    "mcp:start:browser-tools-mcp": "npx @agentdeskai/browser-tools-mcp@latest",
+    "repomix": "npx repomix --remote https://github.com/bobpozun/aio-baby-tracker"
   }
 }

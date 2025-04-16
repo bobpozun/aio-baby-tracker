@@ -33,6 +33,7 @@ const SleepTracker: React.FC = () => {
     profileName,
     fetchEntries, // Get fetch function from hook
     handleDeleteEntry, // Get delete function from hook
+    hasFetchedEmptyData,
   } = useTrackerLogic<SleepEntry>({ trackerType: 'sleep' });
 
   // Keep component-specific form state
@@ -63,7 +64,7 @@ const SleepTracker: React.FC = () => {
 
   // Effect to fetch entries when selected profile changes (after loading)
   useEffect(() => {
-    if (selectedProfile && !isLoading) {
+    if (selectedProfile && !isLoading && !hasFetchedEmptyData) {
       console.log(`SleepTracker: Fetching entries for profile ${selectedProfile.id}`);
       fetchEntries();
     } else if (!isLoading) {
@@ -71,7 +72,7 @@ const SleepTracker: React.FC = () => {
       // setEntries([]); // This is handled within the hook now
       console.log('SleepTracker: No profile selected or still loading, ensuring entries are clear (hook handles this).');
     }
-  }, [selectedProfile?.id, isLoading, fetchEntries]);
+  }, [selectedProfile?.id, isLoading, fetchEntries, hasFetchedEmptyData]);
 
 
   // Function to set the form state for editing an entry (still needed locally)

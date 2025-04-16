@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { apiClient } from '../../utils/apiClient';
-import { useTrackerLogic } from '../../hooks/useTrackerLogic'; // Import the custom hook
+import { useTrackerLogic } from '../../hooks/useTrackerLogic';
 // Import date utils
 import {
   getCurrentDateTimeLocal,
@@ -32,6 +32,7 @@ const MedicineTracker: React.FC = () => {
     profileName,
     fetchEntries, // Get fetch function from hook
     handleDeleteEntry, // Get delete function from hook
+    hasFetchedEmptyData, // Add hasFetchedEmptyData here
   } = useTrackerLogic<MedicineEntry>({ trackerType: 'medicine' });
 
   // Keep component-specific form state
@@ -65,11 +66,13 @@ const MedicineTracker: React.FC = () => {
 
    // Effect to fetch entries when selected profile changes (after loading)
    useEffect(() => {
-    if (selectedProfile && !isLoading) {
+    // Add hasFetchedEmptyData check here
+    if (selectedProfile && !isLoading && !hasFetchedEmptyData) {
       console.log(`MedicineTracker: Fetching entries for profile ${selectedProfile.id}`);
       fetchEntries();
     }
-  }, [selectedProfile?.id, isLoading, fetchEntries]);
+    // Add hasFetchedEmptyData to dependency array
+  }, [selectedProfile?.id, isLoading, fetchEntries, hasFetchedEmptyData]);
 
 
   // Function to set the form state for editing an entry

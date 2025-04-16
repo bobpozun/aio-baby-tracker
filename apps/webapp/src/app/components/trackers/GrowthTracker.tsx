@@ -35,6 +35,7 @@ const GrowthTracker: React.FC = () => {
     profileName,
     fetchEntries, // Get fetch function from hook
     handleDeleteEntry, // Get delete function from hook
+    hasFetchedEmptyData,
   } = useTrackerLogic<GrowthEntry>({ trackerType: 'growth' });
 
   // Keep component-specific form state
@@ -78,11 +79,11 @@ const GrowthTracker: React.FC = () => {
 
    // Effect to fetch entries when selected profile changes (after loading)
    useEffect(() => {
-    if (selectedProfile && !isLoading) {
+    if (selectedProfile && !isLoading && !hasFetchedEmptyData) {
       console.log(`GrowthTracker: Fetching entries for profile ${selectedProfile.id}`);
       fetchEntries();
     }
-  }, [selectedProfile?.id, isLoading, fetchEntries]);
+  }, [selectedProfile?.id, isLoading, fetchEntries, hasFetchedEmptyData]);
 
 
   // Function to set the form state for editing an entry
