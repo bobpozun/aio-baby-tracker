@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { apiClient } from '../../utils/apiClient';
 import { useTrackerLogic } from '../../hooks/useTrackerLogic';
+import { useTrackerForm } from '../../hooks/useTrackerForm';
 // Import date utils
 import {
   getCurrentDateTimeLocal,
@@ -38,8 +39,7 @@ const DiaperTracker: React.FC = () => {
   const [time, setTime] = useState(getCurrentDateTimeLocal());
   const [type, setType] = useState<'wet' | 'dirty' | 'mixed'>('wet');
   const [notes, setNotes] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false); // Local state for submit loading
-  const [formError, setFormError] = useState<string | null>(null); // Local error state specifically for the form
+  // useTrackerForm handles isSubmitting and formError now
 
   // Function to reset form fields
   const resetForm = useCallback(() => {
@@ -79,39 +79,36 @@ const DiaperTracker: React.FC = () => {
     setFormError(null);
   };
 
-  // Component-specific submit logic
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedProfile || !time) return; // Check selectedProfile from hook
-    setFormError(null);
-
-    const entryData: NewDiaperEntryData = {
+  // useTrackerForm handles submit logic
+  const validate = () => {
+    if (!selectedProfile) return 'No profile selected.';
+    if (!time) return 'Time is required.';
+    return null;
+  };
+  const buildEntryData = () => {
+    if (!time) return null;
+    return {
       time: new Date(time).toISOString(),
-      type: type,
+      type,
       notes: notes || undefined,
     };
-
-    setIsSubmitting(true);
-
-    try {
-      const endpoint = `/profiles/${selectedProfile.id}/trackers/diaper`;
-      if (editingEntryId) {
-        await apiClient.put<DiaperEntry>(`${endpoint}/${editingEntryId}`, entryData);
-        console.log(`Updated diaper entry ${editingEntryId}`);
-      } else {
-        await apiClient.post<DiaperEntry>(endpoint, entryData);
-        console.log('Added new diaper entry');
-      }
-      await fetchEntries(); // Refetch using function from hook
-      resetForm();
-    } catch (err: any) {
-      const action = editingEntryId ? 'update' : 'save';
-      console.error(`Failed to ${action} diaper entry:`, err);
-      setFormError(err.message || `Failed to ${action} diaper entry.`);
-    } finally {
-      setIsSubmitting(false);
-    }
   };
+  const {
+    isSubmitting,
+    formError,
+    handleSubmit,
+    setFormError,
+  } = useTrackerForm<NewDiaperEntryData>({
+    editingEntryId,
+    setEditingEntryId,
+    selectedProfileId: selectedProfile?.id,
+    trackerType: 'diaper',
+    fetchEntries,
+    buildEntryData,
+    validate,
+    resetForm,
+    apiClient,
+  });
 
   // Use combined loading state from hook for initial loading display
   if (isLoading && !selectedProfile) {
@@ -227,8 +224,10 @@ const DiaperTracker: React.FC = () => {
             {/* Use combined isLoading for log loading state */}
             {isLoading && entries.length === 0 ? (
               <p>Loading log...</p>
-            ) : entries.length === 0 ? (
+            ) : entries.length === 0 && hasFetchedEmptyData ? (
               <p>No diaper changes recorded for this profile yet.</p>
+            ) : entries.length === 0 ? (
+              <p>Loading log...</p>
             ) : (
               <ul>
                 {entries.map((entry) => {

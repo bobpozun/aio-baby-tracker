@@ -21,6 +21,7 @@ import { AuthUser } from 'aws-amplify/auth';
 import ReportsDashboard from './components/ReportsDashboard';
 import AppLogo from '../../assets/aio-app-logo.png';
 import AppHeaderImg from '../../assets/aio-app-header.png'; // Import header image
+import { getProfileAgeOrDue } from './utils/dateUtils';
 
 // --- Simple SVG Icon Components ---
 const IconWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
@@ -480,26 +481,69 @@ const ProfileSelector: React.FC = () => {
 };
 
 function AppContent({ user, signOut }: AppContentProps) {
+  const { selectedProfileId, getProfileById } = useProfiles();
+  const profile = selectedProfileId ? getProfileById(selectedProfileId) : null;
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
+
+  const toggleMobileMenu = () => {
+    setIsMobileMenuOpen(!isMobileMenuOpen);
+  };
+
+  // Close menu when clicking backdrop
+  const handleBackdropClick = () => {
+    setIsMobileMenuOpen(false);
+  };
+
   return (
     <>
       {' '}
       {/* Use Fragment to avoid extra div */}
-      <header className="app-header">
+      <div className="app-header-container">
+        <header className="app-header">
+        {/* Hamburger Button (only visible on mobile) */}
+        <button
+          className="hamburger-btn md:hidden mr-4 p-2 rounded-md"
+          aria-label={isMobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
+          aria-expanded={isMobileMenuOpen}
+          aria-controls="main-nav"
+          onClick={toggleMobileMenu}
+          style={{ display: 'block' }}
+        >
+          {isMobileMenuOpen ? (
+            // X icon
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+          ) : (
+            // Hamburger icon
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="18" x2="21" y2="18" /></svg>
+          )}
+        </button>
         <img
           src={AppHeaderImg}
           alt="AIO Baby Tracker Header"
           className="app-header-image" // Add class for styling
         />
         <ProfileSelector /> {/* Move the profile selector into the header */}
-        {/* Add user info/sign out button here if needed globally when auth is enabled */}
       </header>
-      <div className="app-body-container">
-        {' '}
-        {/* New container for nav + content */}
-        {/* ProfileSelector removed from here */}
-        <nav className="app-nav">
-          {/* Navigation Title Removed/Commented Out */}
-          {/* <h2>Navigation</h2> */}
+      </div>
+      <div
+        className={`app-body-container ${isMobileMenuOpen ? 'menu-open' : ''}`}
+        onClick={isMobileMenuOpen ? handleBackdropClick : undefined}
+      >
+        {/* Sidebar nav overlay/backdrop for mobile */}
+        {isMobileMenuOpen && (
+          <div className="mobile-nav-backdrop" onClick={handleBackdropClick} />
+        )}
+
+        {/* Navigation Sidebar */}
+        <nav
+          className={`app-nav${isMobileMenuOpen ? ' nav-open' : ''}`}
+          id="main-nav"
+          aria-labelledby="nav-heading"
+          tabIndex={-1}
+        >
+          <h2 id="nav-heading" className="sr-only">
+            Main Navigation
+          </h2>
           <ul>
             <li>
               <HomeIcon /> <Link to="/">Home</Link>
@@ -558,6 +602,25 @@ function AppContent({ user, signOut }: AppContentProps) {
           </ul>
         </nav>
         <div className="app-main-content">
+          {/* Profile Info Bar */}
+          {selectedProfileId && profile && (
+            <div style={{
+              background: 'var(--accent-light-color)',
+              color: 'var(--text-color)',
+              padding: '8px 18px',
+              borderRadius: '8px',
+              margin: '10px 0 18px 0',
+              fontWeight: 500,
+              fontSize: '1.08em',
+              border: '1px solid var(--border-color)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '18px',
+            }}>
+              <span style={{ fontWeight: 600, fontSize: '1.15em' }}>{profile.name}</span>
+              <span style={{ color: 'var(--primary-color)' }}>{getProfileAgeOrDue(profile.birthday)}</span>
+            </div>
+          )}
           {/* Removed H1 from here, it's in the header now */}
           <Routes>
             <Route path="/" element={<Home user={user} signOut={signOut} />} />
@@ -600,7 +663,40 @@ function App() {
   };
 
   return (
-    <Authenticator components={authComponents}>
+    <Authenticator
+      components={authComponents}
+      formFields={{
+        signUp: {
+          username: {
+            label: 'Email',
+            placeholder: 'Enter your email',
+            order: 1,
+          },
+          given_name: {
+            label: 'First Name',
+            placeholder: 'Enter your first name',
+            order: 2,
+            isRequired: true,
+          },
+          family_name: {
+            label: 'Last Name',
+            placeholder: 'Enter your last name',
+            order: 3,
+            isRequired: true,
+          },
+          password: {
+            label: 'Password',
+            placeholder: 'Enter your password',
+            order: 4,
+          },
+          confirm_password: {
+            label: 'Confirm Password',
+            placeholder: 'Confirm your password',
+            order: 5,
+          },
+        },
+      }}
+    >
       {({ signOut, user }) => (
         <main>
           <AppContent user={user} signOut={signOut} />

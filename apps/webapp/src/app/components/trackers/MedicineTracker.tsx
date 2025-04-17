@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { apiClient } from '../../utils/apiClient';
 import { useTrackerLogic } from '../../hooks/useTrackerLogic';
+import { useTrackerForm } from '../../hooks/useTrackerForm';
 // Import date utils
 import {
   getCurrentDateTimeLocal,
@@ -40,8 +41,7 @@ const MedicineTracker: React.FC = () => {
   const [medicineName, setMedicineName] = useState('');
   const [dosage, setDosage] = useState('');
   const [notes, setNotes] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false); // Local state for submit loading
-  const [formError, setFormError] = useState<string | null>(null); // Local error state specifically for the form
+  // useTrackerForm handles isSubmitting and formError now
 
   // Function to reset form fields
   const resetForm = useCallback(() => {
@@ -85,40 +85,37 @@ const MedicineTracker: React.FC = () => {
     setFormError(null);
   };
 
-  // Component-specific submit logic
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedProfile || !time || !medicineName) return; // Check selectedProfile from hook
-    setFormError(null);
-
-    const entryData: NewMedicineEntryData = {
+  // useTrackerForm handles submit logic
+  const validate = () => {
+    if (!selectedProfile) return 'No profile selected.';
+    if (!time || !medicineName) return 'Time and medicine name are required.';
+    return null;
+  };
+  const buildEntryData = () => {
+    if (!time || !medicineName) return null;
+    return {
       time: new Date(time).toISOString(),
-      medicineName: medicineName,
+      medicineName,
       dosage: dosage || undefined,
       notes: notes || undefined,
     };
-
-    setIsSubmitting(true);
-
-    try {
-      const endpoint = `/profiles/${selectedProfile.id}/trackers/medicine`;
-      if (editingEntryId) {
-        await apiClient.put<MedicineEntry>(`${endpoint}/${editingEntryId}`, entryData);
-        console.log(`Updated medicine entry ${editingEntryId}`);
-      } else {
-        await apiClient.post<MedicineEntry>(endpoint, entryData);
-        console.log('Added new medicine entry');
-      }
-      await fetchEntries(); // Refetch using function from hook
-      resetForm();
-    } catch (err: any) {
-      const action = editingEntryId ? 'update' : 'save';
-      console.error(`Failed to ${action} medicine entry:`, err);
-      setFormError(err.message || `Failed to ${action} medicine entry.`);
-    } finally {
-      setIsSubmitting(false);
-    }
   };
+  const {
+    isSubmitting,
+    formError,
+    handleSubmit,
+    setFormError,
+  } = useTrackerForm<NewMedicineEntryData>({
+    editingEntryId,
+    setEditingEntryId,
+    selectedProfileId: selectedProfile?.id,
+    trackerType: 'medicine',
+    fetchEntries,
+    buildEntryData,
+    validate,
+    resetForm,
+    apiClient,
+  });
 
   // Use combined loading state from hook for initial loading display
   if (isLoading && !selectedProfile) {
@@ -217,8 +214,10 @@ const MedicineTracker: React.FC = () => {
             {/* Use combined isLoading for log loading state */}
             {isLoading && entries.length === 0 ? (
               <p>Loading log...</p>
-            ) : entries.length === 0 ? (
+            ) : entries.length === 0 && hasFetchedEmptyData ? (
               <p>No medicine doses recorded for this profile yet.</p>
+            ) : entries.length === 0 ? (
+              <p>Loading log...</p>
             ) : (
               <ul>
                 {entries.map((entry) => {

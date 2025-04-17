@@ -198,12 +198,10 @@ export const handler: Handler = async (
       const command = new QueryCommand({
         TableName: trackerEntriesTable,
         KeyConditionExpression: 'babyId = :bid',
-        // Add filter for trackerType if storing all types in one table,
-        // or use different tables per type. Assuming one table for now.
-        // FilterExpression: 'trackerType = :tt',
+        FilterExpression: 'trackerType = :tt',
         ExpressionAttributeValues: {
           ':bid': babyId,
-          // ':tt': trackerType
+          ':tt': trackerType
         },
         ScanIndexForward: false, // Sort by entryId (timestamp based) descending
       });
@@ -279,6 +277,43 @@ export const handler: Handler = async (
     }
 
     // --- Checklist Routes ---
+    else if (path === '/checklist' && httpMethod === 'GET') {
+      // Fetch ONLY the user's checklist items (custom + completion)
+      const command = new QueryCommand({
+        TableName: checklistStatusTable,
+        KeyConditionExpression: 'userId = :uid',
+        ExpressionAttributeValues: { ':uid': userId },
+      });
+      const result = await docClient.send(command);
+      const userChecklist = result.Items || [];
+      return createApiResponse(200, userChecklist);
+    }
+    else if (path === '/checklist' && httpMethod === 'POST') {
+      // Create a new custom checklist item for the user
+      console.log(`ROUTE: POST /checklist for user ${userId}`);
+      if (!body || !body.text || typeof body.week !== 'number' || !body.profileId) {
+        return createApiResponse(400, {
+          message: 'Missing required fields: text, week, profileId',
+        });
+      }
+      // Generate a unique itemId for the custom item
+      const itemId = `custom_${Date.now()}_${randomUUID().substring(0, 8)}`;
+      const newItem = {
+        userId: userId,
+        itemId: itemId,
+        text: body.text,
+        week: body.week,
+        profileId: body.profileId,
+        completed: !!body.completed, // Default to false if not provided
+        createdAt: new Date().toISOString(),
+      };
+      const command = new PutCommand({
+        TableName: checklistStatusTable,
+        Item: newItem,
+      });
+      await docClient.send(command);
+      return createApiResponse(201, newItem);
+    }
     else if (path === '/checklist/status' && httpMethod === 'GET') {
       console.log(`ROUTE: GET /checklist/status for user ${userId}`);
       const command = new QueryCommand({

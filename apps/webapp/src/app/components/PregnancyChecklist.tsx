@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useProfiles } from '../context/ProfileContext'; // Corrected path
 import { apiClient } from '../utils/apiClient'; // Corrected path
 import checklistData from '../data/pregnancyChecklistData.json'; // Base checklist items
+import { calculatePregnancyWeek } from '../utils/dateUtils';
 
 // Interface for the base checklist item structure
 interface ChecklistItemBase {
@@ -33,30 +34,12 @@ const PregnancyChecklist: React.FC = () => {
   // Calculate current pregnancy week based on selected profile's due date
   const currentWeek = useMemo(() => {
     const profile = getProfileById(selectedProfileId);
-    // Assuming profile.birthday holds the Estimated Due Date (EDD) for pregnancy profiles
     if (profile?.birthday) {
-      try {
-        const dueDate = new Date(profile.birthday);
-        const today = new Date();
-        // Calculate difference in milliseconds
-        const diffTime = dueDate.getTime() - today.getTime();
-        // Calculate remaining days
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        // Calculate total pregnancy days (approx 280)
-        const totalPregnancyDays = 280;
-        // Calculate current day of pregnancy
-        const currentPregnancyDay = totalPregnancyDays - diffDays;
-        // Calculate current week (assuming week 1 starts at day 0)
-        const week = Math.floor(currentPregnancyDay / 7) + 1;
-        // Clamp week between reasonable values (e.g., 1 and 42)
-        return Math.max(1, Math.min(week, 42));
-      } catch (e) {
-        console.error('Error calculating pregnancy week:', e);
-        return null; // Indicate error or inability to calculate
-      }
+      return calculatePregnancyWeek(profile.birthday);
     }
-    return null; // No profile or due date
+    return null;
   }, [selectedProfileId, getProfileById]);
+
 
   // State for adding custom todos
   const [newTodoText, setNewTodoText] = useState('');
@@ -74,7 +57,7 @@ const PregnancyChecklist: React.FC = () => {
     try {
       // Fetch standard item statuses for the selected profile
       const userStatuses = await apiClient.get<UserChecklistItemStatus[]>(
-        '/checklist/status',
+        '\/checklist/status',
         {
           profileId: selectedProfileId,
         }
@@ -92,7 +75,7 @@ const PregnancyChecklist: React.FC = () => {
 
       // Fetch custom checklist items for the selected profile
       const customItems = await apiClient.get<DisplayChecklistItem[]>(
-        '/checklist/custom',
+        '\/checklist',
         {
           profileId: selectedProfileId,
         }
@@ -151,7 +134,7 @@ const PregnancyChecklist: React.FC = () => {
       try {
         // Adjust API endpoint based on whether it's a custom item
         const endpoint = isCustom
-          ? `/checklist/custom/${itemId}`
+          ? `/checklist/status/${itemId}`
           : `/checklist/status/${itemId}`;
         // Pass profileId in the body or query params if needed by backend
         await apiClient.put<{ success: boolean }>(endpoint, {
@@ -188,10 +171,10 @@ const PregnancyChecklist: React.FC = () => {
       setError(null);
 
       try {
-        // Call API to add custom todo (e.g., POST /checklist/custom)
+        // Call API to add custom todo (now POST /checklist/status)
         // Assuming API returns the created item with its new ID
         const createdItem = await apiClient.post<DisplayChecklistItem>(
-          '/checklist/custom',
+          '\/checklist',
           newItemData
         );
 

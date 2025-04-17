@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { apiClient } from '../../utils/apiClient';
-import { useTrackerLogic } from '../../hooks/useTrackerLogic'; // Import the custom hook
+import { useTrackerLogic } from '../../hooks/useTrackerLogic';
+import { useTrackerForm } from '../../hooks/useTrackerForm';
 // Import date utils
 import {
   getCurrentDateTimeLocal,
@@ -40,8 +41,7 @@ const SleepTracker: React.FC = () => {
   const [startTime, setStartTime] = useState(getCurrentDateTimeLocal());
   const [endTime, setEndTime] = useState('');
   const [notes, setNotes] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false); // Local state for submit loading
-  const [formError, setFormError] = useState<string | null>(null); // Local error state specifically for the form
+  // useTrackerForm handles isSubmitting and formError now
 
   // Function to reset form fields (still needed locally)
   const resetForm = useCallback(() => {
@@ -64,7 +64,7 @@ const SleepTracker: React.FC = () => {
 
   // Effect to fetch entries when selected profile changes (after loading)
   useEffect(() => {
-    if (selectedProfile && !isLoading && !hasFetchedEmptyData) {
+    if (selectedProfile && !isLoading && entries.length === 0 && !hasFetchedEmptyData) {
       console.log(`SleepTracker: Fetching entries for profile ${selectedProfile.id}`);
       fetchEntries();
     } else if (!isLoading) {
@@ -72,7 +72,7 @@ const SleepTracker: React.FC = () => {
       // setEntries([]); // This is handled within the hook now
       console.log('SleepTracker: No profile selected or still loading, ensuring entries are clear (hook handles this).');
     }
-  }, [selectedProfile?.id, isLoading, fetchEntries, hasFetchedEmptyData]);
+  }, [selectedProfile?.id, isLoading, fetchEntries, hasFetchedEmptyData, entries.length]);
 
 
   // Function to set the form state for editing an entry (still needed locally)
@@ -84,43 +84,37 @@ const SleepTracker: React.FC = () => {
     setFormError(null); // Clear form error when starting edit
   };
 
-  // Component-specific submit logic
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedProfile || !startTime || !endTime) return; // Check selectedProfile from hook
-    if (new Date(endTime) <= new Date(startTime)) {
-      setFormError('End time must be after start time.'); // Set local form error
-      return;
-    }
-    setFormError(null); // Clear form error
-
-    const entryData: NewSleepEntryData = {
+  // useTrackerForm handles submit logic
+  const validate = () => {
+    if (!selectedProfile) return 'No profile selected.';
+    if (!startTime || !endTime) return 'Both start and end time are required.';
+    if (new Date(endTime) <= new Date(startTime)) return 'End time must be after start time.';
+    return null;
+  };
+  const buildEntryData = () => {
+    if (!startTime || !endTime) return null;
+    return {
       startTime: new Date(startTime).toISOString(),
       endTime: new Date(endTime).toISOString(),
       notes: notes || undefined,
     };
-
-    setIsSubmitting(true); // Use local submitting state
-
-    try {
-      const endpoint = `/profiles/${selectedProfile.id}/trackers/sleep`;
-      if (editingEntryId) {
-        await apiClient.put<SleepEntry>(`${endpoint}/${editingEntryId}`, entryData);
-        console.log(`Updated sleep entry ${editingEntryId}`);
-      } else {
-        await apiClient.post<SleepEntry>(endpoint, entryData);
-        console.log('Added new sleep entry');
-      }
-      await fetchEntries(); // Refetch using function from hook
-      resetForm();
-    } catch (err: any) {
-      const action = editingEntryId ? 'update' : 'save';
-      console.error(`Failed to ${action} sleep entry:`, err);
-      setFormError(err.message || `Failed to ${action} sleep entry.`); // Set local form error
-    } finally {
-      setIsSubmitting(false);
-    }
   };
+  const {
+    isSubmitting,
+    formError,
+    handleSubmit,
+    setFormError,
+  } = useTrackerForm<NewSleepEntryData>({
+    editingEntryId,
+    setEditingEntryId,
+    selectedProfileId: selectedProfile?.id,
+    trackerType: 'sleep',
+    fetchEntries,
+    buildEntryData,
+    validate,
+    resetForm,
+    apiClient,
+  });
 
   // Use combined loading state from hook for initial loading display
   if (isLoading && !selectedProfile) { // Show loading only if profile isn't loaded yet
@@ -210,8 +204,10 @@ const SleepTracker: React.FC = () => {
             {/* Use combined isLoading for log loading state */}
             {isLoading && entries.length === 0 ? (
               <p>Loading log...</p>
-            ) : entries.length === 0 ? (
+            ) : entries.length === 0 && hasFetchedEmptyData ? (
               <p>No sleep entries recorded for this profile yet.</p>
+            ) : entries.length === 0 ? (
+              <p>Loading log...</p>
             ) : (
               <ul>
                 {entries.map((entry) => {

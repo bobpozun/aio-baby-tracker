@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { apiClient } from '../../utils/apiClient';
-import { uploadData, getUrl, remove } from 'aws-amplify/storage'; // Import Storage functions
-import { useTrackerLogic } from '../../hooks/useTrackerLogic'; // Import the custom hook
+import { uploadData, getUrl, remove } from 'aws-amplify/storage';
+import { useTrackerLogic } from '../../hooks/useTrackerLogic';
+import { useTrackerForm } from '../../hooks/useTrackerForm';
 // Import date utils
 import {
   getCurrentDateTimeLocal,
@@ -24,6 +25,29 @@ interface SolidsEntry {
 type NewSolidsEntryData = Omit<SolidsEntry, 'entryId' | 'babyId'>;
 
 const SolidsTracker: React.FC = () => {
+  // ...existing state and hooks...
+
+  // Validation function for solids entry
+  const validate = () => {
+    if (!selectedProfile) return 'No profile selected.';
+    if (!time || !food) return 'Time and food are required.';
+    if (amount && (isNaN(Number(amount)) || Number(amount) <= 0)) return 'Amount must be a positive number.';
+    return null;
+  };
+
+  // Build the entry data for submission, allowing override of imageKey (for uploaded images)
+  const buildEntryData = (imageKeyOverride?: string) => {
+    if (!time || !food) return null;
+    return {
+      time: new Date(time).toISOString(),
+      food,
+      amount: amount ? amount : undefined,
+      reaction: reaction || undefined,
+      notes: notes || undefined,
+      imageKey: imageKeyOverride || imageKey || undefined,
+    };
+  };
+
   // Use the custom hook for shared logic
   const {
     entries,
@@ -50,8 +74,7 @@ const SolidsTracker: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
   const [logImageUrls, setLogImageUrls] = useState<Record<string, string>>({});
-  const [isSubmitting, setIsSubmitting] = useState(false); // Local state for submit loading
-  const [formError, setFormError] = useState<string | null>(null); // Local error state specifically for the form
+  // useTrackerForm handles isSubmitting and formError now
 
   // Function to reset form fields
   const resetForm = useCallback(() => {
@@ -166,68 +189,45 @@ const SolidsTracker: React.FC = () => {
     }
   };
 
-
   // Component-specific submit logic including image upload
+  const [imageKey, setImageKey] = useState<string | undefined>(undefined);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedProfile || !time || !food) return; // Check selectedProfile from hook
+    if (!selectedProfile || !time || !food) return;
     setFormError(null);
     setIsSubmitting(true);
-
-    let imageKey: string | undefined = undefined;
-    const entryToUpdate = editingEntryId
-      ? entries.find((e) => e.entryId === editingEntryId)
-      : undefined;
-
+    let newImageKey = imageKey;
     if (selectedFile) {
-      const key = `solids/${selectedProfile.id}/${Date.now()}-${selectedFile.name}`;
       try {
-        console.log(`Uploading ${key}...`);
-        const uploadResult = await uploadData({ key: key, data: selectedFile }).result;
-        imageKey = uploadResult.key;
-        console.log(`Successfully uploaded ${imageKey}`);
-        if (entryToUpdate?.imageKey && entryToUpdate.imageKey !== imageKey) {
-          try {
-            console.log(`Deleting old image: ${entryToUpdate.imageKey}`);
-            await remove({ key: entryToUpdate.imageKey });
-          } catch (removeError) {
-            console.error(`Failed to delete old S3 object ${entryToUpdate.imageKey}:`, removeError);
-          }
-        }
-      } catch (uploadError) {
-        console.error('Failed to upload image:', uploadError);
-        setFormError('Failed to upload image. Please try again.');
+        const fileName = `${selectedProfile.id}/solids/${Date.now()}_${selectedFile.name}`;
+        await uploadData({ key: fileName, data: selectedFile });
+        newImageKey = fileName;
+        setImageKey(fileName);
+      } catch (uploadErr: any) {
+        setFormError(uploadErr.message || 'Failed to upload image.');
         setIsSubmitting(false);
         return;
       }
-    } else if (editingEntryId && entryToUpdate) {
-      imageKey = entryToUpdate.imageKey;
     }
-
-    const entryData: NewSolidsEntryData = {
-      time: new Date(time).toISOString(),
-      food: food,
-      amount: amount || undefined,
-      reaction: reaction || undefined,
-      notes: notes || undefined,
-      imageKey: imageKey,
-    };
-
+    // Use the hook's handleFormSubmit, but with imageKey override
+    const customBuildEntryData = () => buildEntryData(newImageKey);
     try {
-      const endpoint = `/profiles/${selectedProfile.id}/trackers/solids`;
-      if (editingEntryId) {
-        await apiClient.put<SolidsEntry>(`${endpoint}/${editingEntryId}`, entryData);
-        console.log(`Updated solids entry ${editingEntryId}`);
-      } else {
-        await apiClient.post<SolidsEntry>(endpoint, entryData);
-        console.log('Added new solids entry');
-      }
-      await fetchEntries(); // Refetch using function from hook
-      resetForm();
+      await useTrackerForm<NewSolidsEntryData>({
+        editingEntryId,
+        setEditingEntryId,
+        selectedProfileId: selectedProfile.id,
+        trackerType: 'solids',
+        fetchEntries,
+        buildEntryData: customBuildEntryData,
+        validate,
+        resetForm,
+        apiClient,
+      }).handleSubmit(e);
     } catch (err: any) {
-      const action = editingEntryId ? 'update' : 'save';
-      console.error(`Failed to ${action} solids entry:`, err);
-      setFormError(err.message || `Failed to ${action} solids entry.`);
+      setFormError(err?.message || 'Failed to submit entry.');
     } finally {
       setIsSubmitting(false);
     }
@@ -371,8 +371,10 @@ const SolidsTracker: React.FC = () => {
              {/* Use combined isLoading for log loading state */}
             {isLoading && entries.length === 0 ? (
               <p>Loading log...</p>
-            ) : entries.length === 0 ? (
+            ) : entries.length === 0 && hasFetchedEmptyData ? (
               <p>No solid food entries recorded for this profile yet.</p>
+            ) : entries.length === 0 ? (
+              <p>Loading log...</p>
             ) : (
               <ul>
                 {entries.map((entry) => {

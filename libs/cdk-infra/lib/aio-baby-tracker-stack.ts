@@ -261,15 +261,27 @@ export class AioBabyTrackerStack extends cdk.Stack {
     // /profiles/{profileId}
     const profileIdResource = profilesResource.addResource('{profileId}');
     // These should still inherit the default, but we can make them explicit too if needed
-    profileIdResource.addMethod('PUT');
-    profileIdResource.addMethod('DELETE');
+    profileIdResource.addMethod('PUT', undefined, {
+      authorizationType: apigateway.AuthorizationType.COGNITO,
+      authorizer: authorizer,
+    });
+    profileIdResource.addMethod('DELETE', undefined, {
+      authorizationType: apigateway.AuthorizationType.COGNITO,
+      authorizer: authorizer,
+    });
 
     // /profiles/{profileId}/trackers/{trackerType}
     // Assuming these inherit correctly for now, focus on /profiles first
     const trackersResource = profileIdResource.addResource('trackers');
     const trackerTypeResource = trackersResource.addResource('{trackerType}');
-    trackerTypeResource.addMethod('GET');
-    trackerTypeResource.addMethod('POST');
+    trackerTypeResource.addMethod('GET', undefined, {
+      authorizationType: apigateway.AuthorizationType.COGNITO,
+      authorizer: authorizer,
+    });
+    trackerTypeResource.addMethod('POST', undefined, {
+      authorizationType: apigateway.AuthorizationType.COGNITO,
+      authorizer: authorizer,
+    });
 
     // Add DELETE method for tracker entries
     const trackerEntryIdResource = trackerTypeResource.addResource('{entryId}');
@@ -278,17 +290,29 @@ export class AioBabyTrackerStack extends cdk.Stack {
         authorizer: authorizer,
     });
 
-    // /checklist/status
-    // Assuming these inherit correctly for now
+    // /checklist
     const checklistResource = api.root.addResource('checklist');
+    checklistResource.addMethod('GET', undefined, {
+      authorizationType: apigateway.AuthorizationType.COGNITO,
+      authorizer: authorizer,
+    });
+
+    // /checklist/status
     const checklistStatusResource = checklistResource.addResource('status');
-    checklistStatusResource.addMethod('GET');
+    checklistStatusResource.addMethod('GET', undefined, {
+      authorizationType: apigateway.AuthorizationType.COGNITO,
+      authorizer: authorizer,
+    });
 
     // /checklist/status/{itemId}
     // Assuming these inherit correctly for now
     const checklistItemIdResource =
       checklistStatusResource.addResource('{itemId}');
-    checklistItemIdResource.addMethod('PUT');
+    checklistItemIdResource.addMethod('PUT', undefined, {
+      authorizationType: apigateway.AuthorizationType.COGNITO,
+      authorizer: authorizer,
+    });
+
 
     // TODO: Add routes for custom checklist items if implementing that feature
 

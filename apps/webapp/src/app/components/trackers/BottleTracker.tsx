@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { apiClient } from '../../utils/apiClient';
-import { useTrackerLogic } from '../../hooks/useTrackerLogic'; // Import the custom hook
+import { useTrackerLogic } from '../../hooks/useTrackerLogic';
+import { useTrackerForm } from '../../hooks/useTrackerForm';
 // Import date utils
 import {
   getCurrentDateTimeLocal,
@@ -42,8 +43,7 @@ const BottleTracker: React.FC = () => {
   const [unit, setUnit] = useState<'ml' | 'oz'>('ml');
 const [type, setType] = useState<'formula' | 'breast_milk' | 'other'>('formula');
 const [notes, setNotes] = useState('');
-const [isSubmitting, setIsSubmitting] = useState(false);
-const [formError, setFormError] = useState<string | null>(null);
+// useTrackerForm handles isSubmitting and formError now
 
   // Function to reset form fields
   const resetForm = useCallback(() => {
@@ -87,41 +87,39 @@ const [formError, setFormError] = useState<string | null>(null);
     setFormError(null);
   };
 
-  // Component-specific submit logic
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedProfile || !time || !amount) return; // Check selectedProfile from hook
-    setFormError(null);
-
-    const entryData: NewBottleEntryData = {
+  // useTrackerForm handles submit logic
+  const validate = () => {
+    if (!selectedProfile) return 'No profile selected.';
+    if (!time || !amount) return 'Time and amount are required.';
+    if (isNaN(Number(amount)) || Number(amount) <= 0) return 'Amount must be a positive number.';
+    return null;
+  };
+  const buildEntryData = () => {
+    if (!time || !amount) return null;
+    return {
       time: new Date(time).toISOString(),
       amount: parseFloat(amount),
-      unit: unit,
-      type: type,
+      unit,
+      type,
       notes: notes || undefined,
     };
-
-    setIsSubmitting(true);
-
-    try {
-      const endpoint = `/profiles/${selectedProfile.id}/trackers/bottle`;
-      if (editingEntryId) {
-        await apiClient.put<BottleEntry>(`${endpoint}/${editingEntryId}`, entryData);
-        console.log(`Updated bottle entry ${editingEntryId}`);
-      } else {
-        await apiClient.post<BottleEntry>(endpoint, entryData);
-        console.log('Added new bottle entry');
-      }
-      await fetchEntries(); // Refetch using function from hook
-      resetForm();
-    } catch (err: any) {
-      const action = editingEntryId ? 'update' : 'save';
-      console.error(`Failed to ${action} bottle entry:`, err);
-      setFormError(err.message || `Failed to ${action} bottle entry.`);
-    } finally {
-      setIsSubmitting(false);
-    }
   };
+  const {
+    isSubmitting,
+    formError,
+    handleSubmit,
+    setFormError,
+  } = useTrackerForm<NewBottleEntryData>({
+    editingEntryId,
+    setEditingEntryId,
+    selectedProfileId: selectedProfile?.id,
+    trackerType: 'bottle',
+    fetchEntries,
+    buildEntryData,
+    validate,
+    resetForm,
+    apiClient,
+  });
 
   // Use combined loading state from hook for initial loading display
   if (isLoading && !selectedProfile) {
@@ -233,8 +231,10 @@ const [formError, setFormError] = useState<string | null>(null);
             {/* Use combined isLoading for log loading state */}
             {isLoading && entries.length === 0 ? (
               <p>Loading log...</p>
-            ) : entries.length === 0 ? (
+            ) : entries.length === 0 && hasFetchedEmptyData ? (
               <p>No bottle feedings recorded for this profile yet.</p>
+            ) : entries.length === 0 ? (
+              <p>Loading log...</p>
             ) : (
               <ul>
                 {entries.map((entry) => {

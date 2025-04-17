@@ -76,4 +76,69 @@ export const calculateDuration = (start: string | undefined, end: string | undef
     return `${hours}h ${minutes}m`;
 };
 
+
+/**
+ * Calculates the current pregnancy week given a due date string (YYYY-MM-DD).
+ * Returns an integer week (1-42), or null if invalid.
+ */
+export function calculatePregnancyWeek(dueDateString: string | null | undefined): number | null {
+  if (!dueDateString) return null;
+  try {
+    const dueDate = new Date(dueDateString);
+    if (isNaN(dueDate.getTime())) return null;
+    const today = new Date();
+    // Only use date part for both
+    dueDate.setHours(0, 0, 0, 0);
+    today.setHours(0, 0, 0, 0);
+    const diffTime = dueDate.getTime() - today.getTime();
+    const diffDays = diffTime / (1000 * 60 * 60 * 24);
+    const remainingWeeks = diffDays / 7;
+    const currentWeek = 40 - Math.ceil(remainingWeeks);
+    return Math.max(1, Math.min(currentWeek, 42));
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Returns a string for age (if birthday in past/today) or time until due (if in future).
+ * @param birthdayString YYYY-MM-DD
+ * @returns string like "2 years, 3 months" or "Due in 5 days"
+ */
+export function getProfileAgeOrDue(birthdayString: string): string {
+  if (!birthdayString) return '';
+  const today = new Date();
+  const birthday = new Date(birthdayString);
+  birthday.setHours(0, 0, 0, 0);
+  today.setHours(0, 0, 0, 0);
+  if (birthday > today) {
+    // Due in future
+    const diffTime = birthday.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return `Due in ${diffDays} day${diffDays !== 1 ? 's' : ''}`;
+  } else {
+    // Already born
+    let years = today.getFullYear() - birthday.getFullYear();
+    let months = today.getMonth() - birthday.getMonth();
+    let days = today.getDate() - birthday.getDate();
+    if (days < 0) {
+      months--;
+      // Get days in previous month
+      const prevMonth = new Date(today.getFullYear(), today.getMonth(), 0);
+      days += prevMonth.getDate();
+    }
+    if (months < 0) {
+      years--;
+      months += 12;
+    }
+    let result = '';
+    if (years > 0) result += `${years} year${years !== 1 ? 's' : ''}`;
+    if (months > 0) {
+      if (result) result += ', ';
+      result += `${months} month${months !== 1 ? 's' : ''}`;
+    }
+    if (!result) result = '0 months';
+    return result;
+  }
+}
 // Add other common date/time utilities here if needed

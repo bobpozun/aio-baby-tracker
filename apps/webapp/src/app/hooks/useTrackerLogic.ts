@@ -47,10 +47,6 @@ export function useTrackerLogic<T extends BaseTrackerEntry>({ // Use BaseTracker
   const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
   const [hasFetchedEmptyData, setHasFetchedEmptyData] = useState<boolean>(false);
 
-  useEffect(() => {
-    setHasFetchedEmptyData(false);
-  }, [selectedProfileId]);
-
   const fetchEntries = useCallback(async () => {
     if (!selectedProfileId || isContextLoading) {
       setEntries([]);
@@ -62,10 +58,14 @@ export function useTrackerLogic<T extends BaseTrackerEntry>({ // Use BaseTracker
       const fetchedEntries = await apiClient.get<T[]>(
         `/profiles/${selectedProfileId}/trackers/${trackerType}`
       );
-      console.log(`Fetched ${trackerType} Entries:`, fetchedEntries);
+      // Filter entries by trackerType if present
+      const filteredEntries = (fetchedEntries || []).filter(
+        entry => !('trackerType' in entry) || entry.trackerType === trackerType
+      );
+      console.log(`Fetched ${trackerType} Entries (filtered):`, filteredEntries);
 
       // Basic sorting assuming a 'time' or 'date' field exists - might need adjustment
-      const sortedEntries = (fetchedEntries || []).sort((a, b) => {
+      const sortedEntries = (filteredEntries || []).sort((a, b) => {
          const dateA = new Date(a.time || a.date || 0).getTime();
          const dateB = new Date(b.time || b.date || 0).getTime();
          return dateB - dateA; // Descending
@@ -74,15 +74,18 @@ export function useTrackerLogic<T extends BaseTrackerEntry>({ // Use BaseTracker
       setEntries(sortedEntries);
       if (sortedEntries.length === 0) {
         setHasFetchedEmptyData(true);
+      } else {
+        setHasFetchedEmptyData(false);
       }
     } catch (err: any) {
       console.error(`Failed to fetch ${trackerType} entries:`, err);
       setLocalError(err.message || `Failed to load ${trackerType} entries.`);
       setEntries([]);
+      setHasFetchedEmptyData(false);
     } finally {
       setIsLoadingEntries(false);
     }
-  }, [selectedProfileId, isContextLoading, trackerType]);
+  }, [selectedProfileId, trackerType, isContextLoading]); // Only depend on truly relevant values
 
   const handleDeleteEntry = useCallback(async (entryId: string) => {
     if (!selectedProfileId) return;

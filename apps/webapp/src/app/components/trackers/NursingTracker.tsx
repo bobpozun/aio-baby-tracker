@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { apiClient } from '../../utils/apiClient';
 import { useTrackerLogic } from '../../hooks/useTrackerLogic';
+import { useTrackerForm } from '../../hooks/useTrackerForm';
 // Import date utils
 import {
   getCurrentDateTimeLocal,
@@ -42,8 +43,7 @@ const NursingTracker: React.FC = () => {
   const [durationRight, setDurationRight] = useState('');
   const [lastSide, setLastSide] = useState<'left' | 'right' | ''>('');
   const [notes, setNotes] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false); // Local state for submit loading
-  const [formError, setFormError] = useState<string | null>(null); // Local error state specifically for the form
+  // useTrackerForm handles isSubmitting and formError now
 
   // Function to reset form fields
   const resetForm = useCallback(() => {
@@ -87,42 +87,40 @@ const NursingTracker: React.FC = () => {
     setFormError(null);
   };
 
-  // Component-specific submit logic
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedProfile || !startTime || (!durationLeft && !durationRight))
-      return;
-    setFormError(null);
-
-    const entryData: NewNursingEntryData = {
+  // useTrackerForm handles submit logic
+  const validate = () => {
+    if (!selectedProfile) return 'No profile selected.';
+    if (!startTime || (!durationLeft && !durationRight)) return 'Start time and at least one duration are required.';
+    if (durationLeft && (isNaN(Number(durationLeft)) || Number(durationLeft) < 0)) return 'Left duration must be a non-negative number.';
+    if (durationRight && (isNaN(Number(durationRight)) || Number(durationRight) < 0)) return 'Right duration must be a non-negative number.';
+    return null;
+  };
+  const buildEntryData = () => {
+    if (!startTime || (!durationLeft && !durationRight)) return null;
+    return {
       startTime: new Date(startTime).toISOString(),
       durationLeft: durationLeft ? parseInt(durationLeft, 10) : undefined,
       durationRight: durationRight ? parseInt(durationRight, 10) : undefined,
       lastSide: lastSide || undefined,
       notes: notes || undefined,
     };
-
-    setIsSubmitting(true);
-
-    try {
-      const endpoint = `/profiles/${selectedProfile.id}/trackers/nursing`;
-      if (editingEntryId) {
-        await apiClient.put<NursingEntry>(`${endpoint}/${editingEntryId}`, entryData);
-        console.log(`Updated nursing entry ${editingEntryId}`);
-      } else {
-        await apiClient.post<NursingEntry>(endpoint, entryData);
-        console.log('Added new nursing entry');
-      }
-      await fetchEntries(); // Refetch using function from hook
-      resetForm();
-    } catch (err: any) {
-      const action = editingEntryId ? 'update' : 'save';
-      console.error(`Failed to ${action} nursing entry:`, err);
-      setFormError(err.message || `Failed to ${action} nursing entry.`);
-    } finally {
-      setIsSubmitting(false);
-    }
   };
+  const {
+    isSubmitting,
+    formError,
+    handleSubmit,
+    setFormError,
+  } = useTrackerForm<NewNursingEntryData>({
+    editingEntryId,
+    setEditingEntryId,
+    selectedProfileId: selectedProfile?.id,
+    trackerType: 'nursing',
+    fetchEntries,
+    buildEntryData,
+    validate,
+    resetForm,
+    apiClient,
+  });
 
   const getTotalDuration = (entry: NursingEntry): number => {
     return (entry.durationLeft || 0) + (entry.durationRight || 0);
@@ -240,8 +238,10 @@ const NursingTracker: React.FC = () => {
              {/* Use combined isLoading for log loading state */}
             {isLoading && entries.length === 0 ? (
               <p>Loading log...</p>
-            ) : entries.length === 0 ? (
+            ) : entries.length === 0 && hasFetchedEmptyData ? (
               <p>No nursing sessions recorded for this profile yet.</p>
+            ) : entries.length === 0 ? (
+              <p>Loading log...</p>
             ) : (
               <ul>
                 {entries.map((entry) => {

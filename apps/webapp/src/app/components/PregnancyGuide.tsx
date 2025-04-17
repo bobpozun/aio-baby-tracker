@@ -10,33 +10,7 @@ interface WeeklyInfo {
   developmentDetails: string[];
 }
 
-// Helper function to calculate pregnancy week from due date
-const calculateCurrentWeek = (
-  dueDateString: string | null | undefined
-): number | null => {
-  if (!dueDateString) return null;
-  try {
-    const dueDate = new Date(dueDateString);
-    // Ensure dueDate is valid
-    if (isNaN(dueDate.getTime())) return null;
-
-    const today = new Date();
-    // Calculate difference in milliseconds
-    const diffTime = dueDate.getTime() - today.getTime();
-    // Calculate difference in days
-    const diffDays = diffTime / (1000 * 60 * 60 * 24);
-    // Calculate remaining weeks
-    const remainingWeeks = diffDays / 7;
-    // Calculate current week (assuming 40 weeks total)
-    const currentWeek = 40 - Math.ceil(remainingWeeks);
-
-    // Return week number, ensuring it's within reasonable bounds (e.g., 1-42)
-    return Math.max(1, Math.min(currentWeek, 42)); // Adjust max if needed
-  } catch (error) {
-    console.error('Error calculating pregnancy week:', error);
-    return null;
-  }
-};
+import { calculatePregnancyWeek, getProfileAgeOrDue } from '../utils/dateUtils';
 
 const PregnancyGuide: React.FC = () => {
   const { selectedProfileId, getProfileById } = useProfiles();
@@ -69,7 +43,7 @@ const PregnancyGuide: React.FC = () => {
     const profile = getProfileById(selectedProfileId);
     // TODO: Determine if profile is 'pregnancy' type if model changes
     const dueDate = profile?.birthday; // Assuming 'birthday' holds due date for now
-    const calculatedWeek = calculateCurrentWeek(dueDate);
+    const calculatedWeek = calculatePregnancyWeek(dueDate);
 
     if (
       calculatedWeek !== null &&
