@@ -129,12 +129,10 @@ const SolidsTracker: React.FC = () => {
 
    // Effect to fetch entries when selected profile changes (after loading)
    useEffect(() => {
-    if (selectedProfile && !isLoading && !hasFetchedEmptyData) {
-      console.log(`SolidsTracker: Fetching entries for profile ${selectedProfile.id}`);
+    if (selectedProfile && !isLoading && entries.length === 0 && !hasFetchedEmptyData) {
       fetchEntries();
     }
-  }, [selectedProfile?.id, isLoading, fetchEntries, hasFetchedEmptyData]);
-
+  }, [selectedProfile?.id, isLoading]);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {

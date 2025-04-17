@@ -11,8 +11,13 @@ interface ReportData {
     chartData?: any;
   };
   diaperSummary?: { wetCount: number; dirtyCount: number; chartData?: any };
-  // Add other tracker summaries as needed
+  solidsSummary?: { totalFeedings: number; avgAmount?: number; chartData?: any };
+  medicineSummary?: { totalDoses: number; medicinesGiven: string[]; chartData?: any };
+  growthSummary?: { latestWeight?: number; latestHeight?: number; chartData?: any };
+  pottySummary?: { peeCount: number; poopCount: number; chartData?: any };
+  temperatureSummary?: { readingsCount: number; avgTemp?: number; chartData?: any };
 }
+
 
 const ReportsDashboard: React.FC = () => {
   const { selectedProfileId } = useProfiles(); // Get selected profile
@@ -155,6 +160,51 @@ const ReportsDashboard: React.FC = () => {
                   </p>
                   <p>[Diaper Chart Placeholder]</p>{' '}
                   {/* TODO: Add charting libraries later */}
+                </div>
+              )}
+              {/* Solids Tracker Summary */}
+              {reportData.solidsSummary && (
+                <div>
+                  <h4>Solids Summary</h4>
+                  <p>Total Feedings: {reportData.solidsSummary.totalFeedings ?? 'N/A'}</p>
+                  <p>Average Amount: {reportData.solidsSummary.avgAmount?.toFixed(1) ?? 'N/A'}</p>
+                  <p>[Solids Chart Placeholder]</p>
+                </div>
+              )}
+              {/* Medicine Tracker Summary */}
+              {reportData.medicineSummary && (
+                <div>
+                  <h4>Medicine Summary</h4>
+                  <p>Total Doses: {reportData.medicineSummary.totalDoses ?? 'N/A'}</p>
+                  <p>Medicines Given: {reportData.medicineSummary.medicinesGiven?.join(', ') ?? 'N/A'}</p>
+                  <p>[Medicine Chart Placeholder]</p>
+                </div>
+              )}
+              {/* Growth Tracker Summary */}
+              {reportData.growthSummary && (
+                <div>
+                  <h4>Growth Summary</h4>
+                  <p>Latest Weight: {reportData.growthSummary.latestWeight ?? 'N/A'}</p>
+                  <p>Latest Height: {reportData.growthSummary.latestHeight ?? 'N/A'}</p>
+                  <p>[Growth Chart Placeholder]</p>
+                </div>
+              )}
+              {/* Potty Tracker Summary */}
+              {reportData.pottySummary && (
+                <div>
+                  <h4>Potty Summary</h4>
+                  <p>Pee Count: {reportData.pottySummary.peeCount ?? 'N/A'}</p>
+                  <p>Poop Count: {reportData.pottySummary.poopCount ?? 'N/A'}</p>
+                  <p>[Potty Chart Placeholder]</p>
+                </div>
+              )}
+              {/* Temperature Tracker Summary */}
+              {reportData.temperatureSummary && (
+                <div>
+                  <h4>Temperature Summary</h4>
+                  <p>Readings: {reportData.temperatureSummary.readingsCount ?? 'N/A'}</p>
+                  <p>Average Temp: {reportData.temperatureSummary.avgTemp?.toFixed(1) ?? 'N/A'}</p>
+                  <p>[Temperature Chart Placeholder]</p>
                 </div>
               )}
               {/* Add rendering for other tracker summaries based on reportData structure */}

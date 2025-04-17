@@ -64,15 +64,14 @@ const PottyTracker: React.FC = () => {
      if (!isLoading && !selectedProfile) {
         resetForm();
     }
-  }, [selectedProfile?.id, isLoading, resetForm]);
+  }, [entries, isLoading]);
 
    // Effect to fetch entries when selected profile changes (after loading)
    useEffect(() => {
-    if (selectedProfile && !isLoading && !hasFetchedEmptyData) {
-      console.log(`PottyTracker: Fetching entries for profile ${selectedProfile.id}`);
+    if (selectedProfile && !isLoading && entries.length === 0 && !hasFetchedEmptyData) {
       fetchEntries();
     }
-  }, [selectedProfile?.id, isLoading, fetchEntries, hasFetchedEmptyData]);
+  }, [selectedProfile?.id, isLoading]);
 
 
   // Function to set the form state for editing an entry

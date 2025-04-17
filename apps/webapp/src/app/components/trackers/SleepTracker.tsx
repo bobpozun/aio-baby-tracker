@@ -60,7 +60,7 @@ const SleepTracker: React.FC = () => {
         console.log(`SleepTracker: Profile or loading changed (isLoading: ${isLoading}, selectedProfile: ${selectedProfile?.id}). Resetting form.`);
         resetForm();
     }
-  }, [selectedProfile?.id, isLoading, resetForm]); // Depend on profile ID and context loading state
+  }, [entries, isLoading]); // Depend on entries and context loading state
 
   // Effect to fetch entries when selected profile changes (after loading)
   useEffect(() => {
@@ -72,7 +72,7 @@ const SleepTracker: React.FC = () => {
       // setEntries([]); // This is handled within the hook now
       console.log('SleepTracker: No profile selected or still loading, ensuring entries are clear (hook handles this).');
     }
-  }, [selectedProfile?.id, isLoading, fetchEntries, hasFetchedEmptyData, entries.length]);
+  }, [selectedProfile?.id, isLoading]);
 
 
   // Function to set the form state for editing an entry (still needed locally)

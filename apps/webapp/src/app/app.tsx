@@ -191,12 +191,17 @@ const DiaperIcon = () => (
       strokeLinecap="round"
       strokeLinejoin="round"
     >
-      <path d="m6.5 6.5 11 11"></path>
-      <path d="m21 2-7.5 7.5"></path>
-      <path d="m3 3 7 7"></path>
-      <path d="m14 14 7 7"></path>
+      {/* Diaper U-shaped body */}
+      <path d="M4 8 Q6 20 12 20 Q18 20 20 8 Q16 10 12 10 Q8 10 4 8 Z" fill="none" />
+      {/* Left tab/wing */}
+      <path d="M4 8 Q2 12 6 12" />
+      {/* Right tab/wing */}
+      <path d="M20 8 Q22 12 18 12" />
+      {/* Central vertical crease */}
+      <path d="M12 10 Q12 15 12 20" />
     </svg>
   </IconWrapper>
+
 );
 const MedicineIcon = () => (
   <IconWrapper>
@@ -204,23 +209,21 @@ const MedicineIcon = () => (
       xmlns="http://www.w3.org/2000/svg"
       width="18"
       height="18"
-      viewBox="0 0 24 24"
+      viewBox="0 0 18 18"
       fill="none"
       stroke="currentColor"
       strokeWidth="2"
       strokeLinecap="round"
       strokeLinejoin="round"
     >
-      <path d="M12 2v2"></path>
-      <path d="m4.93 4.93 1.41 1.41"></path>
-      <path d="M20 12h2"></path>
-      <path d="m19.07 4.93-1.41 1.41"></path>
-      <path d="M12 22v-2"></path>
-      <path d="m4.93 19.07 1.41-1.41"></path>
-      <path d="M4 12H2"></path>
-      <path d="m19.07 19.07-1.41-1.41"></path>
-      <circle cx="12" cy="12" r="4"></circle>
-      <path d="M12 16a4 4 0 0 0 0-8"></path>
+      <g transform="rotate(45 9 9)">
+        {/* Bulb of dropper */}
+        <ellipse cx="9" cy="4" rx="4" ry="2.5" />
+        {/* Tube */}
+        <rect x="7.25" y="6" width="3.5" height="7" rx="1.2" />
+        {/* Droplet */}
+        <path d="M9 14 Q10.2 16 9 18 Q7.8 16 9 14 Z" />
+      </g>
     </svg>
   </IconWrapper>
 );
@@ -265,19 +268,23 @@ const PottyIcon = () => (
       xmlns="http://www.w3.org/2000/svg"
       width="18"
       height="18"
-      viewBox="0 0 24 24"
+      viewBox="0 0 18 18"
       fill="none"
       stroke="currentColor"
-      strokeWidth="2"
+      strokeWidth="1.5"
       strokeLinecap="round"
       strokeLinejoin="round"
     >
-      <path d="M11 12H3"></path>
-      <path d="M14 12h7"></path>
-      <path d="M19 17a1 1 0 0 0 1-1 3 3 0 0 0-3-3h-1"></path>
-      <path d="M5 17a1 1 0 0 1-1-1 3 3 0 0 1 3-3h1"></path>
-      <path d="M12 12v9"></path>
-      <path d="M17 12v-2a3 3 0 0 0-3-3h-4a3 3 0 0 0-3 3v2"></path>
+      {/* Toilet bowl */}
+      <ellipse cx="9" cy="12" rx="5.5" ry="3.5" />
+      {/* Toilet seat (slightly larger, lighter stroke) */}
+      <ellipse cx="9" cy="12" rx="6.5" ry="4.2" strokeWidth="1" />
+      {/* Toilet tank */}
+      <rect x="4" y="3" width="10" height="4" rx="1.5" />
+      {/* Toilet base */}
+      <rect x="7" y="15" width="4" height="2" rx="1" />
+      {/* Optional: flush handle */}
+      <line x1="12.5" y1="4.5" x2="14" y2="3.2" strokeWidth="1" />
     </svg>
   </IconWrapper>
 );

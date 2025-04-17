@@ -65,15 +65,15 @@ const NursingTracker: React.FC = () => {
      if (!isLoading && !selectedProfile) {
         resetForm();
     }
-  }, [selectedProfile?.id, isLoading, resetForm]);
+  }, [entries, isLoading]);
 
    // Effect to fetch entries when selected profile changes (after loading)
    useEffect(() => {
-    if (selectedProfile && !isLoading && !hasFetchedEmptyData) {
+    if (selectedProfile && !isLoading && entries.length === 0 && !hasFetchedEmptyData) {
       console.log(`NursingTracker: Fetching entries for profile ${selectedProfile.id}`);
       fetchEntries();
     }
-  }, [selectedProfile?.id, isLoading, fetchEntries, hasFetchedEmptyData]);
+  }, [selectedProfile?.id, isLoading]);
 
 
   // Function to set the form state for editing an entry

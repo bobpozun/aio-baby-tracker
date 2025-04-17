@@ -134,10 +134,6 @@ export class AioBabyTrackerStack extends cdk.Stack {
       autoDeleteObjects: true, // Automatically delete objects in bucket on stack removal
     });
 
-    // --- CloudFront Origin Access Control (OAC) ---
-    // OAC is implicitly configured by CDK when using S3Origin without specifying an OAI.
-    // The explicit OAI and Bucket Policy are no longer needed.
-
     // --- CloudFront Distribution ---
     const distribution = new cloudfront.Distribution(
       this,
@@ -249,6 +245,13 @@ export class AioBabyTrackerStack extends cdk.Stack {
 
     // /profiles
     const profilesResource = api.root.addResource('profiles');
+
+    // /notes
+    const notesResource = api.root.addResource('notes');
+
+    // /reports
+    const reportsResource = api.root.addResource('reports');
+
     profilesResource.addMethod('GET', undefined, { // Explicitly define method options
       authorizationType: apigateway.AuthorizationType.COGNITO,
       authorizer: authorizer,
@@ -293,6 +296,11 @@ export class AioBabyTrackerStack extends cdk.Stack {
     // /checklist
     const checklistResource = api.root.addResource('checklist');
     checklistResource.addMethod('GET', undefined, {
+      authorizationType: apigateway.AuthorizationType.COGNITO,
+      authorizer: authorizer,
+    });
+    // POST /checklist (custom checklist item creation)
+    checklistResource.addMethod('POST', undefined, {
       authorizationType: apigateway.AuthorizationType.COGNITO,
       authorizer: authorizer,
     });

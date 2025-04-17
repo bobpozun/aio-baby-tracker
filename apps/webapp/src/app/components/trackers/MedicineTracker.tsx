@@ -62,7 +62,7 @@ const MedicineTracker: React.FC = () => {
      if (!isLoading && !selectedProfile) {
         resetForm();
     }
-  }, [selectedProfile?.id, isLoading, resetForm]);
+  }, [entries, isLoading]);
 
    // Effect to fetch entries when selected profile changes (after loading)
    useEffect(() => {

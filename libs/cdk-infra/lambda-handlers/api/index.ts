@@ -50,6 +50,10 @@ const createApiResponse = (
 export const handler: Handler = async (
   event: APIGatewayProxyEvent
 ): Promise<APIGatewayProxyResult> => {
+  // Handle CORS preflight requests
+  if (event.httpMethod === 'OPTIONS') {
+    return createApiResponse(200, {});
+  }
   console.log('EVENT:', JSON.stringify(event, null, 2));
 
   const httpMethod = event.httpMethod;
@@ -313,6 +317,10 @@ export const handler: Handler = async (
       });
       await docClient.send(command);
       return createApiResponse(201, newItem);
+    }
+    else if (path === '/checklist' && httpMethod === 'OPTIONS') {
+      // CORS preflight handler for /checklist
+      return createApiResponse(200, {});
     }
     else if (path === '/checklist/status' && httpMethod === 'GET') {
       console.log(`ROUTE: GET /checklist/status for user ${userId}`);
