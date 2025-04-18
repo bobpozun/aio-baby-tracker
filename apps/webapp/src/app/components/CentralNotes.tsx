@@ -75,18 +75,31 @@ const CentralNotes: React.FC = () => {
           <p>No notes recorded for this profile yet.</p>
         )}
         {!isLoading && !error && allNotes.length > 0 && (
-          <ul>
-            {allNotes.map((note) => (
-              <li key={note.id}>
-                <strong>[{note.trackerType}]</strong> -{' '}
-                {new Date(note.time).toLocaleString()}
-                <p style={{ margin: '5px 0 10px 15px', fontStyle: 'italic' }}>
-                  {note.notes}
-                </p>
-                {/* Add link back to the original tracker entry later */}
-              </li>
+          <div>
+            {Object.entries(
+              allNotes.reduce((acc, note) => {
+                if (!acc[note.trackerType]) acc[note.trackerType] = [];
+                acc[note.trackerType].push(note);
+                return acc;
+              }, {} as Record<string, NoteEntry[]>)
+            ).map(([trackerType, notes]) => (
+              <div key={trackerType} style={{ marginBottom: '2em' }}>
+                <h3 style={{ textTransform: 'capitalize', borderBottom: '1px solid #eee' }}>{trackerType} Notes</h3>
+                <ul style={{ listStyleType: 'none', paddingLeft: 0 }}>
+                  {notes
+                    .slice()
+                    .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
+                    .map((note) => (
+                      <li key={note.id} style={{ marginBottom: '1em', background: '#fafbfc', borderRadius: 6, padding: '0.5em 1em', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
+                        <div style={{ fontSize: '0.95em', color: '#666' }}>{new Date(note.time).toLocaleString()}</div>
+                        <div style={{ margin: '5px 0 0 0', fontStyle: 'italic' }}>{note.notes}</div>
+                        {/* Add link back to the original tracker entry later */}
+                      </li>
+                    ))}
+                </ul>
+              </div>
             ))}
-          </ul>
+          </div>
         )}
       </section>
     </div>

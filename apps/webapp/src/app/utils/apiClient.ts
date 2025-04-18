@@ -7,7 +7,8 @@ const apiName = 'AioApi'; // Matches the name in amplifyconfiguration.json
 async function getAuthToken() {
   try {
     const { tokens } = await fetchAuthSession({ forceRefresh: false });
-    return tokens?.idToken?.toString(); // Get the ID token JWT string
+    // Use idToken for API Gateway Cognito authorizer (default), fallback to accessToken if needed
+    return tokens?.idToken?.toString() || tokens?.accessToken?.toString();
   } catch (err) {
     console.error('Error fetching auth session:', err);
     return undefined;
@@ -31,7 +32,7 @@ async function makeApiRequest<T>(
   const authToken = await getAuthToken();
   const headers = {
     ...options?.headers,
-    ...(authToken && { Authorization: authToken }), // Add auth token if available
+    ...(authToken && { Authorization: `Bearer ${authToken}` }), // Add auth token as Bearer
   };
 
   const operationOptions = {

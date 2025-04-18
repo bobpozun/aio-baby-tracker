@@ -66,13 +66,10 @@ const MedicineTracker: React.FC = () => {
 
    // Effect to fetch entries when selected profile changes (after loading)
    useEffect(() => {
-    // Add hasFetchedEmptyData check here
-    if (selectedProfile && !isLoading && !hasFetchedEmptyData) {
-      console.log(`MedicineTracker: Fetching entries for profile ${selectedProfile.id}`);
+    if (selectedProfile && !isLoading && entries.length === 0 && !hasFetchedEmptyData) {
       fetchEntries();
     }
-    // Add hasFetchedEmptyData to dependency array
-  }, [selectedProfile?.id, isLoading, fetchEntries, hasFetchedEmptyData]);
+  }, [selectedProfile?.id, isLoading]);
 
 
   // Function to set the form state for editing an entry

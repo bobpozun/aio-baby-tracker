@@ -280,6 +280,173 @@ export const handler: Handler = async (
       return createApiResponse(200, { message: 'Tracker entry deleted' });
     }
 
+    // --- Reports Route ---
+    else if (path === '/reports' && httpMethod === 'GET') {
+      // GET /reports?profileId=...&trackers=...&timeRange=...
+      const { profileId, trackers, timeRange } = event.queryStringParameters || {};
+      if (!profileId || !trackers || !timeRange) {
+        return createApiResponse(400, { message: 'Missing required query parameters: profileId, trackers, timeRange' });
+      }
+      // Parse trackers as array
+      const trackersArr = trackers.split(',').map((t: string) => t.trim()).filter(Boolean);
+
+      // Determine time window
+      let fromDate: Date;
+      const now = new Date();
+      if (timeRange === 'last24hours') {
+        fromDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+      } else if (timeRange === 'last7days') {
+        fromDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      } else if (timeRange === 'last30days') {
+        fromDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      } else {
+        // Default to last 7 days
+        fromDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      }
+
+      // Query all entries for this profileId (babyId) in time window
+      const command = new QueryCommand({
+        TableName: trackerEntriesTable,
+        KeyConditionExpression: 'babyId = :bid',
+        ExpressionAttributeValues: {
+          ':bid': profileId,
+        },
+        ScanIndexForward: false, // newest first
+      });
+      const result = await docClient.send(command);
+      const allEntries = (result.Items || []).filter((entry: any) => {
+        // Filter by trackerType and time
+        if (!trackersArr.includes(entry.trackerType)) return false;
+        // Accept either time or startTime
+        const entryDateStr = entry.time || entry.startTime;
+        if (!entryDateStr) return false;
+        const entryTime = new Date(entryDateStr);
+        return entryTime >= fromDate && entryTime <= now;
+      });
+
+      // Aggregate data by trackerType
+      const report: any = {};
+      for (const tracker of trackersArr) {
+        const entries = allEntries.filter((e: any) => e.trackerType === tracker);
+        if (tracker === 'sleep') {
+  const totalHours = entries.reduce((sum: number, e: any) => sum + (e.durationHours || 0), 0);
+  const avgDuration = entries.length ? totalHours / entries.length : 0;
+  const chartData = entries.map((e: any) => ({ date: e.time, startDateTime: e.startTime || e.time, hours: e.durationHours || 0 }));
+  report.sleepSummary = { totalHours, avgDuration, chartData };
+} else if (tracker === 'nursing') {
+  // Nursing entries may have durationLeft and durationRight
+  let chartData: Array<{ date: string, side: string, duration: number, volume: number | null }> = [];
+  let allDurations: number[] = [];
+
+  entries.forEach((e: any) => {
+    if (e.durationLeft && e.durationLeft > 0) {
+      chartData.push({
+        date: e.startTime,
+        startDateTime: e.startTime,
+        side: 'left',
+        duration: e.durationLeft,
+        volume: 0
+      });
+      allDurations.push(e.durationLeft);
+    }
+    if (e.durationRight && e.durationRight > 0) {
+      chartData.push({
+        date: e.startTime,
+        startDateTime: e.startTime,
+        side: 'right',
+        duration: e.durationRight,
+        volume: 0
+      });
+      allDurations.push(e.durationRight);
+    }
+  });
+
+  const totalSessions = allDurations.length;
+  const avgDuration = totalSessions ? (allDurations.reduce((sum, d) => sum + d, 0) / totalSessions) : 0;
+  const avgVolume = 0; // No volume data in current nursing entries
+  report.nursingSummary = { totalSessions, avgDuration, avgVolume, chartData };
+
+} else if (tracker === 'bottle') {
+  const totalBottles = entries.length;
+  const avgVolume = entries.length ? (entries.reduce((sum: number, e: any) => sum + (e.volume || 0), 0) / entries.length) : 0;
+  const chartData = entries.map((e: any) => ({ date: e.time, startDateTime: e.time, volume: e.volume || 0 }));
+  report.bottleSummary = { totalBottles, avgVolume, chartData };
+} else if (tracker === 'diaper') {
+  const wetCount = entries.filter((e: any) => e.type === 'wet').length;
+  const dirtyCount = entries.filter((e: any) => e.type === 'dirty').length;
+  const chartData = entries.map((e: any) => ({ date: e.time, startDateTime: e.time, type: e.type }));
+  report.diaperSummary = { wetCount, dirtyCount, chartData };
+} else if (tracker === 'solids') {
+  const totalFeedings = entries.length;
+  const avgAmount = entries.length ? (entries.reduce((sum: number, e: any) => sum + (e.amount || 0), 0) / entries.length) : 0;
+  const chartData = entries.map((e: any) => ({ date: e.time, startDateTime: e.time, amount: e.amount || 0 }));
+  report.solidsSummary = { totalFeedings, avgAmount, chartData };
+} else if (tracker === 'medicine') {
+  const totalDoses = entries.length;
+  const medicinesGiven = Array.from(new Set(entries.map((e: any) => e.medicineName).filter(Boolean)));
+  const chartData = entries.map((e: any) => ({ date: e.time, startDateTime: e.time, medicineName: e.medicineName || '' }));
+  report.medicineSummary = { totalDoses, medicinesGiven, chartData };
+} else if (tracker === 'growth') {
+  // Only latest entry matters
+  const sorted = entries.sort((a: any, b: any) => new Date(b.time).getTime() - new Date(a.time).getTime());
+  const latest = sorted[0] || {};
+  const chartData = entries.map((e: any) => ({ date: e.time, startDateTime: e.time, weight: e.weight, height: e.height }));
+  report.growthSummary = { latestWeight: latest.weight, latestHeight: latest.height, chartData };
+} else if (tracker === 'potty') {
+  const peeCount = entries.filter((e: any) => e.type === 'pee').length;
+  const poopCount = entries.filter((e: any) => e.type === 'poop').length;
+  const chartData = entries.map((e: any) => ({ date: e.time, startDateTime: e.time, type: e.type }));
+  report.pottySummary = { peeCount, poopCount, chartData };
+} else if (tracker === 'temperature') {
+  const readingsCount = entries.length;
+  const avgTemp = entries.length ? (entries.reduce((sum: number, e: any) => sum + (e.temperature || 0), 0) / entries.length) : 0;
+  const chartData = entries.map((e: any) => ({ date: e.time, startDateTime: e.time, temperature: e.temperature || 0 }));
+  report.temperatureSummary = { readingsCount, avgTemp, chartData };
+}
+
+      }
+      return createApiResponse(200, report);
+    }
+    else if (path === '/reports' && httpMethod === 'OPTIONS') {
+      // CORS preflight handler for /reports
+      return createApiResponse(200, {});
+    }
+    // --- Notes Route ---
+    else if (path === '/notes' && httpMethod === 'GET') {
+      // GET /notes?profileId=...
+      const { profileId } = event.queryStringParameters || {};
+      if (!profileId) {
+        return createApiResponse(400, { message: 'Missing required query parameter: profileId' });
+      }
+      // Query all tracker entries for this babyId (profileId)
+      const command = new QueryCommand({
+        TableName: trackerEntriesTable,
+        KeyConditionExpression: 'babyId = :bid',
+        ExpressionAttributeValues: {
+          ':bid': profileId,
+        },
+        ScanIndexForward: false, // newest first
+      });
+      const result = await docClient.send(command);
+      // Only keep entries that have a non-empty notes field
+      // Always include 'time' in the response. If missing, set to null to avoid 'Invalid Date' in UI.
+      const notesEntries = (result.Items || [])
+        .filter((entry: any) => entry.notes && entry.notes.trim() !== '')
+        .map((entry: any) => ({
+          id: entry.entryId,
+          trackerType: entry.trackerType,
+          time: entry.time !== undefined ? entry.time : null,
+          notes: entry.notes,
+          profileId: entry.babyId,
+        }));
+      // Sort by time descending
+      notesEntries.sort((a: any, b: any) => new Date(b.time).getTime() - new Date(a.time).getTime());
+      return createApiResponse(200, notesEntries);
+    }
+    else if (path === '/notes' && httpMethod === 'OPTIONS') {
+      // CORS preflight handler for /notes
+      return createApiResponse(200, {});
+    }
     // --- Checklist Routes ---
     else if (path === '/checklist' && httpMethod === 'GET') {
       // Fetch ONLY the user's checklist items (custom + completion)

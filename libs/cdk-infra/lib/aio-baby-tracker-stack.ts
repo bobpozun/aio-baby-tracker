@@ -175,12 +175,15 @@ export class AioBabyTrackerStack extends cdk.Stack {
       // Correct path relative to this file (libs/cdk-infra/lib/): ../../../dist/apps/webapp
       sources: [
         s3deploy.Source.asset(
-          path.join(__dirname, '../../../dist/apps/webapp')
+          path.join(__dirname, '../../../dist/apps/webapp'), {
+            exclude: ['**/*.map', '**/*.test.*', '**/*.spec.*', '**/*.md', '**/*.DS_Store', '**/*.log', '**/*.zip', '**/*.tar', '**/*.7z', '**/*.gz', '**/*.mov', '**/*.mp4', '**/*.avi', '**/*.mkv', '**/*.webm', '**/.*', '**/node_modules/**', '**/coverage/**', '**/dist/**', '**/tmp/**', '**/logs/**', '**/*~', '**/*.bak', '**/*.swp', '**/*.tmp', '**/*.large'] // Exclude common large/unnecessary files
+          }
         ),
       ],
       destinationBucket: hostingBucket,
       distribution: distribution, // Invalidate CloudFront cache on deployment
       distributionPaths: ['/*'], // Invalidate everything
+      memoryLimit: 1536, // Increase memory for large deployments
     });
 
     // --- Lambda Function (using NodejsFunction for automatic bundling) ---
@@ -248,9 +251,21 @@ export class AioBabyTrackerStack extends cdk.Stack {
 
     // /notes
     const notesResource = api.root.addResource('notes');
+    // /notes (Cognito-protected, CORS handled globally)
+    notesResource.addMethod('GET', undefined, {
+      authorizationType: apigateway.AuthorizationType.COGNITO,
+      authorizer: authorizer,
+    });
+    // Do not add OPTIONS method here if already handled by defaultCorsPreflightOptions or elsewhere
+
 
     // /reports
     const reportsResource = api.root.addResource('reports');
+    // Add GET method for /reports with Cognito authorizer
+    reportsResource.addMethod('GET', undefined, {
+      authorizationType: apigateway.AuthorizationType.COGNITO,
+      authorizer: authorizer,
+    });
 
     profilesResource.addMethod('GET', undefined, { // Explicitly define method options
       authorizationType: apigateway.AuthorizationType.COGNITO,
@@ -330,6 +345,27 @@ export class AioBabyTrackerStack extends cdk.Stack {
       topicName: 'aio-baby-tracker-notifications',
     });
     // Subscriptions to be added later
+
+    // --- Add Gateway Responses for CORS (for all 4XX/5XX errors) ---
+    // This must be after 'api' is declared
+    if (api instanceof apigateway.RestApi) {
+      api.addGatewayResponse('Default4xx', {
+        type: apigateway.ResponseType.DEFAULT_4XX,
+        responseHeaders: {
+          'Access-Control-Allow-Origin': "'*'",
+          'Access-Control-Allow-Headers': "'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token'",
+          'Access-Control-Allow-Methods': "'OPTIONS,POST,GET,PUT,DELETE'",
+        },
+      });
+      api.addGatewayResponse('Default5xx', {
+        type: apigateway.ResponseType.DEFAULT_5XX,
+        responseHeaders: {
+          'Access-Control-Allow-Origin': "'*'",
+          'Access-Control-Allow-Headers': "'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token'",
+          'Access-Control-Allow-Methods': "'OPTIONS,POST,GET,PUT,DELETE'",
+        },
+      });
+    }
 
     // --- Outputs ---
     new cdk.CfnOutput(this, 'UserPoolId', {
