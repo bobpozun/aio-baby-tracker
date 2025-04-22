@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useProfiles, BabyProfile } from '../context/ProfileContext';
 
-// Sub-component for editing a profile inline
+
 const EditProfileForm: React.FC<{
   profile: BabyProfile;
   onSave: (id: string, name: string, birthday: string) => void;
@@ -58,21 +58,21 @@ const EditProfileForm: React.FC<{
 };
 
 const BabyProfiles: React.FC = () => {
-  const { profiles, addProfile, editProfile, deleteProfile } = useProfiles(); // Use context and deleteProfile
+  const { profiles, addProfile, editProfile, deleteProfile } = useProfiles(); 
   const [newProfileName, setNewProfileName] = useState('');
   const [newProfileBirthday, setNewProfileBirthday] = useState('');
   const [editingProfileId, setEditingProfileId] = useState<string | null>(null);
 
   const handleAddProfileSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    addProfile(newProfileName, newProfileBirthday); // Use context action
+    addProfile(newProfileName, newProfileBirthday); 
     setNewProfileName('');
     setNewProfileBirthday('');
   };
 
   const handleEditSave = (id: string, name: string, birthday: string) => {
-    editProfile(id, name, birthday); // Use context action
-    setEditingProfileId(null); // Close edit form
+    editProfile(id, name, birthday); 
+    setEditingProfileId(null); 
   };
 
   const handleDeleteClick = (id: string, name: string) => {
@@ -81,7 +81,7 @@ const BabyProfiles: React.FC = () => {
         `Are you sure you want to delete the profile for ${name}? This action cannot be undone.`
       )
     ) {
-      deleteProfile(id); // Use context action
+      deleteProfile(id); 
     }
   };
 
@@ -116,7 +116,7 @@ const BabyProfiles: React.FC = () => {
                     >
                       Edit
                     </button>
-                    {/* Add delete button */}
+                    {}
                     <button
                       onClick={() =>
                         handleDeleteClick(profile.id, profile.name)

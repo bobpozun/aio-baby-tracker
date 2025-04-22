@@ -1,74 +1,79 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { apiClient } from '../utils/apiClient'; // Import the API client
-import { ProfileContext } from '../context/ProfileContext'; // Import ProfileContext
+import { apiClient } from '../utils/apiClient'; 
+import { ProfileContext } from '../context/ProfileContext'; 
 
-// Interface for Note Entry (assuming structure from API)
+
 interface NoteEntry {
-  id: string; // Or noteId, depending on backend
+  id: string;
   trackerType: string;
-  time: string; // ISO string format expected
+  time?: string;
+  startTime?: string;
   notes: string;
-  profileId: string; // Link note to a profile
+  profileId: string;
 }
+
+const NOTES_PER_TYPE_DEFAULT = 10;
 
 const CentralNotes: React.FC = () => {
   const [allNotes, setAllNotes] = useState<NoteEntry[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(false); // Add loading state
-  const [error, setError] = useState<string | null>(null); // Add error state
-  const profileContext = useContext(ProfileContext); // Get context
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+  const [expandedCounts, setExpandedCounts] = useState<Record<string, number>>({});
+  const profileContext = useContext(ProfileContext);
 
-  // Handle case where context might be undefined
+  
   if (!profileContext) {
-    // This should ideally not happen if used within ProfileProvider
+    
     return <p>Error: Notes component must be used within a ProfileProvider.</p>;
-    // Or return null; or a loading indicator
+    
   }
-  const { selectedProfileId } = profileContext; // Destructure after checking context exists
+  const { selectedProfileId } = profileContext; 
 
   useEffect(() => {
     const fetchNotes = async () => {
       if (!selectedProfileId) {
-        setAllNotes([]); // Clear notes if no profile is selected
+        setAllNotes([]); 
         return;
       }
 
       setIsLoading(true);
       setError(null);
       try {
-        // Fetch notes for the selected profile
-        // Assuming endpoint /notes?profileId={selectedProfileId}
+        
+        
         const fetchedNotes = await apiClient.get<NoteEntry[]>('/notes', {
           profileId: selectedProfileId,
         });
-        // Sort notes chronologically (newest first)
+        
+        const getNoteDate = (note: any) => note.time || note.startTime || note.endTime;
         const sortedNotes = (fetchedNotes || []).sort(
-          (a, b) => new Date(b.time).getTime() - new Date(a.time).getTime()
+          (a, b) => new Date(getNoteDate(b)).getTime() - new Date(getNoteDate(a)).getTime()
         );
         setAllNotes(sortedNotes);
       } catch (err: any) {
         console.error('Failed to fetch notes:', err);
         setError(err.message || 'Failed to load notes.');
-        setAllNotes([]); // Clear notes on error
+        setAllNotes([]); 
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchNotes();
-  }, [selectedProfileId]); // Re-fetch when selectedProfileId changes
+  }, [selectedProfileId]); 
 
   return (
     <div>
       {' '}
-      {/* Outer div */}
-      <h2>Central Notes Log</h2> {/* Title outside section */}
+      {}
+      <h2>Central Notes Log</h2> {}
       <section>
         {' '}
-        {/* Section for content */}
+        {}
         <p>
           All notes recorded across different trackers, sorted chronologically.
         </p>
-        {/* Add filtering options later */}
+        {}
         {isLoading && <p>Loading notes...</p>}
         {error && <p style={{ color: 'red' }}>Error: {error}</p>}
         {!isLoading && !error && allNotes.length === 0 && (
@@ -82,23 +87,81 @@ const CentralNotes: React.FC = () => {
                 acc[note.trackerType].push(note);
                 return acc;
               }, {} as Record<string, NoteEntry[]>)
-            ).map(([trackerType, notes]) => (
-              <div key={trackerType} style={{ marginBottom: '2em' }}>
-                <h3 style={{ textTransform: 'capitalize', borderBottom: '1px solid #eee' }}>{trackerType} Notes</h3>
-                <ul style={{ listStyleType: 'none', paddingLeft: 0 }}>
-                  {notes
-                    .slice()
-                    .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
-                    .map((note) => (
+            ).map(([trackerType, notes]) => {
+              const sortedNotes = notes
+                .slice()
+                .sort((a, b) => {
+                  const dateA = typeof a.time === 'string' ? new Date(a.time) : (typeof a.startTime === 'string' ? new Date(a.startTime) : new Date(0));
+                  const dateB = typeof b.time === 'string' ? new Date(b.time) : (typeof b.startTime === 'string' ? new Date(b.startTime) : new Date(0));
+                  return dateB.getTime() - dateA.getTime();
+                });
+              const countToShow = expandedCounts[trackerType] ?? NOTES_PER_TYPE_DEFAULT;
+              const isTruncated = sortedNotes.length > countToShow;
+              const visibleNotes = sortedNotes.slice(0, countToShow);
+
+              return (
+                <div key={trackerType} style={{ marginBottom: '2em' }}>
+                  <h3 style={{ textTransform: 'capitalize', borderBottom: '1px solid #eee' }}>{trackerType} Notes</h3>
+                  <ul style={{ listStyleType: 'none', paddingLeft: 0 }}>
+                    {visibleNotes.map((note) => (
                       <li key={note.id} style={{ marginBottom: '1em', background: '#fafbfc', borderRadius: 6, padding: '0.5em 1em', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
-                        <div style={{ fontSize: '0.95em', color: '#666' }}>{new Date(note.time).toLocaleString()}</div>
+                        <div style={{ fontSize: '0.95em', color: '#666' }}>{(() => {
+                          const dateStr = note.time || note.startTime;
+                          if (typeof dateStr === 'string') {
+                            const dateObj = new Date(dateStr);
+                            return !isNaN(dateObj.getTime())
+                              ? dateObj.toLocaleString(undefined, { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
+                              : 'Invalid Date';
+                          } else {
+                            return 'Invalid Date';
+                          }
+                        })()}</div>
                         <div style={{ margin: '5px 0 0 0', fontStyle: 'italic' }}>{note.notes}</div>
-                        {/* Add link back to the original tracker entry later */}
                       </li>
                     ))}
-                </ul>
-              </div>
-            ))}
+                  </ul>
+                  {isTruncated && (
+                    <div style={{ marginTop: 8 }}>
+                      <button
+                        style={{ marginRight: 8 }}
+                        onClick={() =>
+                          setExpandedCounts((prev) => ({
+                            ...prev,
+                            [trackerType]: (prev[trackerType] ?? NOTES_PER_TYPE_DEFAULT) + NOTES_PER_TYPE_DEFAULT,
+                          }))
+                        }
+                      >
+                        Show More
+                      </button>
+                      <button
+                        onClick={() =>
+                          setExpandedCounts((prev) => ({
+                            ...prev,
+                            [trackerType]: sortedNotes.length,
+                          }))
+                        }
+                      >
+                        Show All
+                      </button>
+                    </div>
+                  )}
+                  {countToShow > NOTES_PER_TYPE_DEFAULT && (
+                    <div style={{ marginTop: 8 }}>
+                      <button
+                        onClick={() =>
+                          setExpandedCounts((prev) => ({
+                            ...prev,
+                            [trackerType]: NOTES_PER_TYPE_DEFAULT,
+                          }))
+                        }
+                      >
+                        Show Less
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
       </section>

@@ -1,8 +1,4 @@
 'use strict';
-// This file should be committed to your repository! It wraps Nx and ensures
-// that your local installation matches nx.json.
-// See: https://nx.dev/recipes/installation/install-non-javascript for more info.
-
 Object.defineProperty(exports, '__esModule', { value: true });
 const fs = require('fs');
 const path = require('path');
@@ -74,9 +70,7 @@ function performInstallation(currentInstallation, nxJson) {
       windowsHide: false,
     });
   } catch (e) {
-    // revert possible changes to the current installation
     fs.writeFileSync(installationPath, JSON.stringify(currentInstallation));
-    // rethrow
     throw e;
   }
 }

@@ -1,8 +1,8 @@
 import React from 'react';
-import { Route, Routes, Link, useNavigate } from 'react-router-dom'; // Import useNavigate
+import { Route, Routes, Link, useNavigate } from 'react-router-dom'; 
 import { Authenticator, Button } from '@aws-amplify/ui-react';
 import '@aws-amplify/ui-react/styles.css';
-import { useProfiles } from './context/ProfileContext'; // Import useProfiles
+import { useProfiles } from './context/ProfileContext'; 
 
 import BabyProfiles from './components/BabyProfiles';
 import PregnancyGuide from './components/PregnancyGuide';
@@ -20,10 +20,10 @@ import CentralNotes from './components/CentralNotes';
 import { AuthUser } from 'aws-amplify/auth';
 import ReportsDashboard from './components/ReportsDashboard';
 import AppLogo from '../../assets/aio-app-logo.png';
-import AppHeaderImg from '../../assets/aio-app-header.png'; // Import header image
+import AppHeaderImg from '../../assets/aio-app-header.png'; 
 import { getProfileAgeOrDue } from './utils/dateUtils';
 
-// --- Simple SVG Icon Components ---
+
 const IconWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <span className="nav-icon">{children}</span>
 );
@@ -191,13 +191,13 @@ const DiaperIcon = () => (
       strokeLinecap="round"
       strokeLinejoin="round"
     >
-      {/* Diaper U-shaped body */}
+      {}
       <path d="M4 8 Q6 20 12 20 Q18 20 20 8 Q16 10 12 10 Q8 10 4 8 Z" fill="none" />
-      {/* Left tab/wing */}
+      {}
       <path d="M4 8 Q2 12 6 12" />
-      {/* Right tab/wing */}
+      {}
       <path d="M20 8 Q22 12 18 12" />
-      {/* Central vertical crease */}
+      {}
       <path d="M12 10 Q12 15 12 20" />
     </svg>
   </IconWrapper>
@@ -217,11 +217,11 @@ const MedicineIcon = () => (
       strokeLinejoin="round"
     >
       <g transform="rotate(45 9 9)">
-        {/* Bulb of dropper */}
+        {}
         <ellipse cx="9" cy="4" rx="4" ry="2.5" />
-        {/* Tube */}
+        {}
         <rect x="7.25" y="6" width="3.5" height="7" rx="1.2" />
-        {/* Droplet */}
+        {}
         <path d="M9 14 Q10.2 16 9 18 Q7.8 16 9 14 Z" />
       </g>
     </svg>
@@ -275,15 +275,15 @@ const PottyIcon = () => (
       strokeLinecap="round"
       strokeLinejoin="round"
     >
-      {/* Toilet bowl */}
+      {}
       <ellipse cx="9" cy="12" rx="5.5" ry="3.5" />
-      {/* Toilet seat (slightly larger, lighter stroke) */}
+      {}
       <ellipse cx="9" cy="12" rx="6.5" ry="4.2" strokeWidth="1" />
-      {/* Toilet tank */}
+      {}
       <rect x="4" y="3" width="10" height="4" rx="1.5" />
-      {/* Toilet base */}
+      {}
       <rect x="7" y="15" width="4" height="2" rx="1" />
-      {/* Optional: flush handle */}
+      {}
       <line x1="12.5" y1="4.5" x2="14" y2="3.2" strokeWidth="1" />
     </svg>
   </IconWrapper>
@@ -346,7 +346,7 @@ const SettingsIcon = () => (
     </svg>
   </IconWrapper>
 );
-// --- End SVG Icon Components ---
+
 
 interface AppContentProps {
   user?: AuthUser;
@@ -357,13 +357,13 @@ const Home = ({ user, signOut }: AppContentProps) => {
   return (
     <div>
       {' '}
-      {/* Outer div */}
-      <h2>Home Page</h2> {/* Title outside section */}
+      {}
+      <h2>Home Page</h2> {}
       <section>
         {' '}
-        {/* Section for content */}
+        {}
         <p>Welcome, {user?.signInDetails?.loginId || 'User'}!</p>
-        {/* Logo removed from Home page */}
+        {}
         {signOut && (
           <Button onClick={signOut} style={{ display: 'block', margin: '20px auto 0 auto' }}>
             Sign Out
@@ -414,55 +414,55 @@ const Settings = () => {
   );
 };
 
-// Component for the Profile Selector Dropdown
+
 const ProfileSelector: React.FC = () => {
   const { profiles, selectedProfileId, selectProfile } = useProfiles();
-  const navigate = useNavigate(); // Hook for navigation
+  const navigate = useNavigate(); 
 
   const handleSelectionChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     const value = event.target.value;
     if (value === 'add_new') {
-      navigate('/profiles'); // Navigate to profile management page
+      navigate('/profiles'); 
     } else if (value) {
       // Ensure a profile was actually selected (not the disabled placeholder)
-      selectProfile(value); // Select the chosen profile ID
+      selectProfile(value); 
     }
   };
 
-  // Adjusted styling for header placement - remove label, auto width
+  
   return (
     <div
       className="profile-selector-container"
       style={{
-        marginLeft: 'auto' /* Push to the right */,
-        alignSelf: 'center' /* Vertical align */,
+        marginLeft: 'auto' ,
+        alignSelf: 'center' ,
       }}
     >
-      {/* Label removed */}
+      {}
       <select
         id="profile-select"
-        value={selectedProfileId || ''} // Keep selectedProfileId logic for consistency
+        value={selectedProfileId || ''} 
         onChange={handleSelectionChange}
         style={{
           padding: '5px 25px 5px 8px',
-          /* Increased right padding */ border: '1px solid #ccc',
+           border: '1px solid #ccc',
           borderRadius: '4px',
           backgroundColor: 'white',
-          fontSize: '0.9em' /* Adjust size */,
+          fontSize: '0.9em' ,
         }}
       >
         {profiles.length === 0 ? (
           // NEW LOGIC: Show disabled placeholder and active Add option
-          <>
+          (<>
             <option value="" disabled>
               -- No profiles yet --
             </option>
             <option value="add_new" style={{ fontStyle: 'italic', color: '#555' }}>
               + Add Profile
             </option>
-          </>
+          </>)
         ) : (
-          // Existing logic for when profiles > 0
+          
           <>
             {profiles.map((profile) => (
               <option key={profile.id} value={profile.id}>
@@ -496,7 +496,7 @@ function AppContent({ user, signOut }: AppContentProps) {
     setIsMobileMenuOpen(!isMobileMenuOpen);
   };
 
-  // Close menu when clicking backdrop
+  
   const handleBackdropClick = () => {
     setIsMobileMenuOpen(false);
   };
@@ -504,10 +504,10 @@ function AppContent({ user, signOut }: AppContentProps) {
   return (
     <>
       {' '}
-      {/* Use Fragment to avoid extra div */}
+      {}
       <div className="app-header-container">
         <header className="app-header">
-        {/* Hamburger Button (only visible on mobile) */}
+        {}
         <button
           className="hamburger-btn md:hidden mr-4 p-2 rounded-md"
           aria-label={isMobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
@@ -517,31 +517,31 @@ function AppContent({ user, signOut }: AppContentProps) {
           style={{ display: 'block' }}
         >
           {isMobileMenuOpen ? (
-            // X icon
+            
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
           ) : (
-            // Hamburger icon
+            
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="18" x2="21" y2="18" /></svg>
           )}
         </button>
         <img
           src={AppHeaderImg}
           alt="AIO Baby Tracker Header"
-          className="app-header-image" // Add class for styling
+          className="app-header-image" 
         />
-        <ProfileSelector /> {/* Move the profile selector into the header */}
+        <ProfileSelector /> {}
       </header>
       </div>
       <div
         className={`app-body-container ${isMobileMenuOpen ? 'menu-open' : ''}`}
         onClick={isMobileMenuOpen ? handleBackdropClick : undefined}
       >
-        {/* Sidebar nav overlay/backdrop for mobile */}
+        {}
         {isMobileMenuOpen && (
           <div className="mobile-nav-backdrop" onClick={handleBackdropClick} />
         )}
 
-        {/* Navigation Sidebar */}
+        {}
         <nav
           className={`app-nav${isMobileMenuOpen ? ' nav-open' : ''}`}
           id="main-nav"
@@ -609,7 +609,7 @@ function AppContent({ user, signOut }: AppContentProps) {
           </ul>
         </nav>
         <div className="app-main-content">
-          {/* Profile Info Bar */}
+          {}
           {selectedProfileId && profile && (
             <div style={{
               background: 'var(--accent-light-color)',
@@ -628,7 +628,7 @@ function AppContent({ user, signOut }: AppContentProps) {
               <span style={{ color: 'var(--primary-color)' }}>{getProfileAgeOrDue(profile.birthday)}</span>
             </div>
           )}
-          {/* Removed H1 from here, it's in the header now */}
+          {}
           <Routes>
             <Route path="/" element={<Home user={user} signOut={signOut} />} />
             <Route path="/profiles" element={<BabyProfiles />} />
@@ -654,13 +654,13 @@ function AppContent({ user, signOut }: AppContentProps) {
 }
 
 function App() {
-  // Define components for Authenticator customization
+  
   const authComponents = {
     Header() {
       return (
         <div style={{ textAlign: 'center', padding: '20px 0 10px' }}>
           <img
-            src={AppLogo} // Use imported logo variable
+            src={AppLogo} 
             alt="AIO Baby Tracker Logo"
             style={{ maxWidth: '150px', marginBottom: '10px' }}
           />

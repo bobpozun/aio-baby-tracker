@@ -1,8 +1,4 @@
-import {
-  Handler,
-  APIGatewayProxyEvent,
-  APIGatewayProxyResult,
-} from 'aws-lambda';
+import { Handler, APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import {
   DynamoDBDocumentClient,
@@ -12,58 +8,74 @@ import {
   QueryCommand,
   UpdateCommand,
 } from '@aws-sdk/lib-dynamodb';
-import { randomUUID } from 'crypto'; // For generating unique IDs
+import { randomUUID } from 'crypto';
 
 const dbClient = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(dbClient);
 
-// Get table names from environment variables set by CDK
 const babiesTable = process.env.BABIES_TABLE_NAME;
 const trackerEntriesTable = process.env.TRACKER_ENTRIES_TABLE_NAME;
 const checklistStatusTable = process.env.CHECKLIST_STATUS_TABLE_NAME;
 
-// --- Sanity Check: Log environment variables on cold start ---
 console.log('ENV VAR - babiesTable:', babiesTable);
 console.log('ENV VAR - trackerEntriesTable:', trackerEntriesTable);
 console.log('ENV VAR - checklistStatusTable:', checklistStatusTable);
-// --- End Sanity Check ---
 
-
-// Helper function to create standard API responses
-const createApiResponse = (
-  statusCode: number,
-  body: any
-): APIGatewayProxyResult => {
+const createApiResponse = (statusCode: number, body: any): APIGatewayProxyResult => {
   return {
     statusCode: statusCode,
     headers: {
       'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': '*', // TODO: Restrict in production
-      'Access-Control-Allow-Headers':
-        'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Headers': 'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token',
       'Access-Control-Allow-Methods': 'OPTIONS,POST,GET,PUT,DELETE',
     },
     body: JSON.stringify(body),
   };
 };
 
-export const handler: Handler = async (
-  event: APIGatewayProxyEvent
-): Promise<APIGatewayProxyResult> => {
-  // Handle CORS preflight requests
+export const handler: Handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
   if (event.httpMethod === 'OPTIONS') {
     return createApiResponse(200, {});
   }
   console.log('EVENT:', JSON.stringify(event, null, 2));
 
+  console.log('DEBUG: event.requestContext:', JSON.stringify(event.requestContext, null, 2));
+  if (event.requestContext && event.requestContext.authorizer) {
+    console.log('DEBUG: event.requestContext.authorizer:', JSON.stringify(event.requestContext.authorizer, null, 2));
+  } else {
+    console.log('DEBUG: event.requestContext.authorizer is missing');
+  }
+
   const httpMethod = event.httpMethod;
-  const path = event.resource || event.path; // Use resource path defined in API Gateway
+  const path = event.resource || event.path;
+  let normalizedPath = path;
+  const stageMatch = normalizedPath.match(/^\/(prod|dev|staging)(\/|$)/);
+  if (stageMatch) {
+    normalizedPath = normalizedPath.replace(/^\/(prod|dev|staging)(\/|$)/, '/');
+  }
+
+  if (normalizedPath.length > 1 && normalizedPath.endsWith('/')) {
+    normalizedPath = normalizedPath.slice(0, -1);
+  }
+  console.log('DEBUG: normalizedPath:', normalizedPath, 'httpMethod:', httpMethod);
   const pathParameters = event.pathParameters;
   const body = event.body ? JSON.parse(event.body) : null;
 
-  // Extract user ID (sub) from Cognito authorizer context
-  // This relies on the Cognito authorizer being correctly configured in API Gateway
+  console.log('DEBUG: authorizer.claims:', JSON.stringify(event.requestContext.authorizer?.claims, null, 2));
   const userId = event.requestContext.authorizer?.claims?.sub;
+
+  const debugPath = event.resource || event.path;
+  console.log(
+    'DEBUG: path:',
+    debugPath,
+    'event.path:',
+    event.path,
+    'event.resource:',
+    event.resource,
+    'event.httpMethod:',
+    event.httpMethod
+  );
 
   if (!userId) {
     console.error('User ID not found in authorizer claims.');
@@ -74,17 +86,15 @@ export const handler: Handler = async (
 
   console.log(`Authenticated User ID (sub): ${userId}`);
 
-  // --- Check if table names are loaded ---
   if (!babiesTable || !trackerEntriesTable || !checklistStatusTable) {
-      console.error('CRITICAL: One or more DynamoDB table names are missing from environment variables!');
-      return createApiResponse(500, { message: 'Internal Server Error: Configuration missing.' });
+    console.error('CRITICAL: One or more DynamoDB table names are missing from environment variables!');
+    return createApiResponse(500, {
+      message: 'Internal Server Error: Configuration missing.',
+    });
   }
-  // --- End Check ---
-
 
   try {
-    // --- Profile Routes (Using BabiesTable) ---
-    if (path === '/profiles' && httpMethod === 'GET') {
+    if (normalizedPath === '/profiles' && httpMethod === 'GET') {
       console.log(`ROUTE: GET /profiles for user ${userId}`);
       const command = new QueryCommand({
         TableName: babiesTable,
@@ -92,16 +102,15 @@ export const handler: Handler = async (
         ExpressionAttributeValues: { ':uid': userId },
       });
       const result = await docClient.send(command);
-      // Map DynamoDB items to the frontend BabyProfile structure
-      const profiles = (result.Items || []).map(item => ({
-          id: item.babyId, // Map babyId to id
-          name: item.name,
-          birthday: item.birthday,
-          // Include other fields if the frontend interface expects them later
+
+      const profiles = (result.Items || []).map((item) => ({
+        id: item.babyId,
+        name: item.name,
+        birthday: item.birthday,
       }));
       console.log(`Returning ${profiles.length} mapped profiles.`);
-      return createApiResponse(200, profiles); // Return the mapped array
-    } else if (path === '/profiles' && httpMethod === 'POST') {
+      return createApiResponse(200, profiles);
+    } else if (normalizedPath === '/profiles' && httpMethod === 'POST') {
       console.log(`ROUTE: POST /profiles for user ${userId}`);
       if (!body || !body.name || !body.birthday) {
         return createApiResponse(400, {
@@ -113,7 +122,7 @@ export const handler: Handler = async (
         userId: userId,
         babyId: babyId,
         name: body.name,
-        birthday: body.birthday, // Assuming this holds due date or actual birthday
+        birthday: body.birthday,
         createdAt: new Date().toISOString(),
       };
       const command = new PutCommand({
@@ -121,13 +130,12 @@ export const handler: Handler = async (
         Item: newItem,
       });
       await docClient.send(command);
-      // Return the created item (adjust based on BabyProfile interface)
       return createApiResponse(201, {
         id: babyId,
         name: newItem.name,
         birthday: newItem.birthday,
       });
-    } else if (path === '/profiles/{profileId}' && httpMethod === 'PUT') {
+    } else if (normalizedPath === '/profiles/{profileId}' && httpMethod === 'PUT') {
       const profileId = pathParameters?.profileId;
       console.log(`ROUTE: PUT /profiles/${profileId} for user ${userId}`);
       if (!profileId || !body || !body.name || !body.birthday) {
@@ -139,22 +147,71 @@ export const handler: Handler = async (
         TableName: babiesTable,
         Key: { userId: userId, babyId: profileId },
         UpdateExpression: 'set #nm = :n, birthday = :b, updatedAt = :ua',
-        ExpressionAttributeNames: { '#nm': 'name' }, // 'name' is a reserved word
+        ExpressionAttributeNames: { '#nm': 'name' },
         ExpressionAttributeValues: {
           ':n': body.name,
           ':b': body.birthday,
           ':ua': new Date().toISOString(),
         },
-        ReturnValues: 'ALL_NEW', // Return the updated item
+        ReturnValues: 'ALL_NEW',
       });
       const result = await docClient.send(command);
-      // Return the updated item (adjust based on BabyProfile interface)
+
       return createApiResponse(200, { id: profileId, ...result.Attributes });
-    } else if (path === '/profiles/{profileId}' && httpMethod === 'DELETE') {
+    } else if (normalizedPath === '/profiles/{profileId}' && httpMethod === 'DELETE') {
       const profileId = pathParameters?.profileId;
-      console.log(`ROUTE: DELETE /profiles/${profileId} for user ${userId}`);
       if (!profileId) {
         return createApiResponse(400, { message: 'Missing profileId' });
+      }
+      console.log(`ROUTE: DELETE /profiles/${profileId} for user ${userId}`);
+
+      let trackerEntries;
+      try {
+        const queryResult = await docClient.send(
+          new QueryCommand({
+            TableName: trackerEntriesTable,
+            KeyConditionExpression: 'babyId = :bid',
+            ExpressionAttributeValues: { ':bid': profileId },
+          })
+        );
+        trackerEntries = queryResult.Items || [];
+        console.log(`Found ${trackerEntries.length} tracker entries for profile ${profileId}`);
+      } catch (err) {
+        console.error('Error querying tracker entries for profile:', err);
+        return createApiResponse(500, {
+          message: 'Failed to query tracker entries for profile.',
+        });
+      }
+
+      const BATCH_SIZE = 25;
+      for (let i = 0; i < trackerEntries.length; i += BATCH_SIZE) {
+        const batch = trackerEntries.slice(i, i + BATCH_SIZE);
+        const deleteRequests = batch.map((entry: any) => ({
+          DeleteRequest: {
+            Key: { babyId: entry.babyId, entryId: entry.entryId },
+          },
+        }));
+        const batchParams = {
+          RequestItems: {
+            [trackerEntriesTable as string]: deleteRequests,
+          },
+        };
+        try {
+          const { BatchWriteCommand } = require('@aws-sdk/lib-dynamodb');
+          await docClient.send(new BatchWriteCommand(batchParams));
+          console.log(`Deleted batch of ${deleteRequests.length} tracker entries for profile ${profileId}`);
+        } catch (err) {
+          try {
+            console.error('Error deleting tracker entries batch:', err);
+            console.error('Full error object:', JSON.stringify(err, Object.getOwnPropertyNames(err), 2));
+          } catch (logErr) {
+            console.error('Error stringifying error:', logErr);
+            console.error('Raw error:', err);
+          }
+          return createApiResponse(500, {
+            message: 'Failed to delete tracker entries for profile.',
+          });
+        }
       }
       const command = new DeleteCommand({
         TableName: babiesTable,
@@ -162,17 +219,11 @@ export const handler: Handler = async (
       });
       await docClient.send(command);
       return createApiResponse(200, {
-        message: `Profile ${profileId} deleted successfully`,
+        message: `Profile ${profileId} and all related tracker entries deleted successfully`,
       });
-    }
-
-    // --- Tracker Routes ---
-    else if (
-      path === '/profiles/{profileId}/trackers/{trackerType}' &&
-      httpMethod === 'GET'
-    ) {
+    } else if (normalizedPath === '/profiles/{profileId}/trackers/{trackerType}' && httpMethod === 'GET') {
       const babyId = pathParameters?.profileId;
-      const trackerType = pathParameters?.trackerType; // e.g., 'nursing', 'bottle'
+      const trackerType = pathParameters?.trackerType;
       console.log(`ROUTE: GET /profiles/${babyId}/trackers/${trackerType}`);
       if (!babyId || !trackerType) {
         return createApiResponse(400, {
@@ -180,7 +231,6 @@ export const handler: Handler = async (
         });
       }
 
-      // --- Verify Ownership ---
       try {
         const getProfileCommand = new GetCommand({
           TableName: babiesTable,
@@ -189,32 +239,31 @@ export const handler: Handler = async (
         const profileResult = await docClient.send(getProfileCommand);
         if (!profileResult.Item) {
           console.warn(`User ${userId} does not own profile ${babyId} or it does not exist.`);
-          return createApiResponse(404, { message: 'Profile not found or access denied.' });
+          return createApiResponse(404, {
+            message: 'Profile not found or access denied.',
+          });
         }
-         console.log(`User ${userId} verified ownership of profile ${babyId}.`);
+        console.log(`User ${userId} verified ownership of profile ${babyId}.`);
       } catch (verifyError: any) {
-         console.error(`Error verifying profile ownership for ${babyId}:`, verifyError);
-         return createApiResponse(500, { message: 'Internal Server Error during ownership verification.' });
+        console.error(`Error verifying profile ownership for ${babyId}:`, verifyError);
+        return createApiResponse(500, {
+          message: 'Internal Server Error during ownership verification.',
+        });
       }
-      // --- End Ownership Verification ---
 
-      // Now proceed with querying tracker entries for the verified babyId
       const command = new QueryCommand({
         TableName: trackerEntriesTable,
         KeyConditionExpression: 'babyId = :bid',
         FilterExpression: 'trackerType = :tt',
         ExpressionAttributeValues: {
           ':bid': babyId,
-          ':tt': trackerType
+          ':tt': trackerType,
         },
-        ScanIndexForward: false, // Sort by entryId (timestamp based) descending
+        ScanIndexForward: false,
       });
       const result = await docClient.send(command);
       return createApiResponse(200, result.Items || []);
-    } else if (
-      path === '/profiles/{profileId}/trackers/{trackerType}' &&
-      httpMethod === 'POST'
-    ) {
+    } else if (normalizedPath === '/profiles/{profileId}/trackers/{trackerType}' && httpMethod === 'POST') {
       const babyId = pathParameters?.profileId;
       const trackerType = pathParameters?.trackerType;
       console.log(`ROUTE: POST /profiles/${babyId}/trackers/${trackerType}`);
@@ -223,16 +272,13 @@ export const handler: Handler = async (
           message: 'Missing profileId, trackerType, or request body',
         });
       }
-      // TODO: Verify user owns this babyId
-      const entryId = `${trackerType}_${Date.now()}_${randomUUID().substring(
-        0,
-        8
-      )}`; // Example entry ID
+
+      const entryId = `${trackerType}_${Date.now()}_${randomUUID().substring(0, 8)}`;
       const newItem = {
         babyId: babyId,
         entryId: entryId,
-        trackerType: trackerType, // Store the type if using one table
-        ...body, // Spread the data from the request body
+        trackerType: trackerType,
+        ...body,
         createdAt: new Date().toISOString(),
       };
       const command = new PutCommand({
@@ -240,11 +286,8 @@ export const handler: Handler = async (
         Item: newItem,
       });
       await docClient.send(command);
-      return createApiResponse(201, newItem); // Return the created entry
-    } else if (
-      path === '/profiles/{profileId}/trackers/{trackerType}/{entryId}' &&
-      httpMethod === 'DELETE'
-    ) {
+      return createApiResponse(201, newItem);
+    } else if (normalizedPath === '/profiles/{profileId}/trackers/{trackerType}/{entryId}' && httpMethod === 'DELETE') {
       const babyId = pathParameters?.profileId;
       const trackerType = pathParameters?.trackerType;
       const entryId = pathParameters?.entryId;
@@ -254,7 +297,6 @@ export const handler: Handler = async (
         return createApiResponse(400, { message: 'Missing parameters' });
       }
 
-      // --- Verify Ownership (same as GET) ---
       try {
         const getProfileCommand = new GetCommand({
           TableName: babiesTable,
@@ -263,14 +305,17 @@ export const handler: Handler = async (
         const profileResult = await docClient.send(getProfileCommand);
         if (!profileResult.Item) {
           console.warn(`User ${userId} does not own profile ${babyId} or it does not exist.`);
-          return createApiResponse(404, { message: 'Profile not found or access denied.' });
+          return createApiResponse(404, {
+            message: 'Profile not found or access denied.',
+          });
         }
         console.log(`User ${userId} verified ownership of profile ${babyId}.`);
       } catch (verifyError: any) {
         console.error(`Error verifying profile ownership for ${babyId}:`, verifyError);
-        return createApiResponse(500, { message: 'Internal Server Error during ownership verification.' });
+        return createApiResponse(500, {
+          message: 'Internal Server Error during ownership verification.',
+        });
       }
-      // --- End Ownership Verification ---
 
       const command = new DeleteCommand({
         TableName: trackerEntriesTable,
@@ -278,19 +323,19 @@ export const handler: Handler = async (
       });
       await docClient.send(command);
       return createApiResponse(200, { message: 'Tracker entry deleted' });
-    }
-
-    // --- Reports Route ---
-    else if (path === '/reports' && httpMethod === 'GET') {
-      // GET /reports?profileId=...&trackers=...&timeRange=...
+    } else if (normalizedPath === '/reports' && httpMethod === 'GET') {
       const { profileId, trackers, timeRange } = event.queryStringParameters || {};
       if (!profileId || !trackers || !timeRange) {
-        return createApiResponse(400, { message: 'Missing required query parameters: profileId, trackers, timeRange' });
+        return createApiResponse(400, {
+          message: 'Missing required query parameters: profileId, trackers, timeRange',
+        });
       }
-      // Parse trackers as array
-      const trackersArr = trackers.split(',').map((t: string) => t.trim()).filter(Boolean);
 
-      // Determine time window
+      const trackersArr = trackers
+        .split(',')
+        .map((t: string) => t.trim())
+        .filter(Boolean);
+
       let fromDate: Date;
       const now = new Date();
       if (timeRange === 'last24hours') {
@@ -300,174 +345,192 @@ export const handler: Handler = async (
       } else if (timeRange === 'last30days') {
         fromDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
       } else {
-        // Default to last 7 days
         fromDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
       }
 
-      // Query all entries for this profileId (babyId) in time window
       const command = new QueryCommand({
         TableName: trackerEntriesTable,
         KeyConditionExpression: 'babyId = :bid',
         ExpressionAttributeValues: {
           ':bid': profileId,
         },
-        ScanIndexForward: false, // newest first
+        ScanIndexForward: false,
       });
       const result = await docClient.send(command);
       const allEntries = (result.Items || []).filter((entry: any) => {
-        // Filter by trackerType and time
         if (!trackersArr.includes(entry.trackerType)) return false;
-        // Accept either time or startTime
+
         const entryDateStr = entry.time || entry.startTime;
         if (!entryDateStr) return false;
         const entryTime = new Date(entryDateStr);
         return entryTime >= fromDate && entryTime <= now;
       });
 
-      // Aggregate data by trackerType
       const report: any = {};
       for (const tracker of trackersArr) {
         const entries = allEntries.filter((e: any) => e.trackerType === tracker);
         if (tracker === 'sleep') {
-  const totalHours = entries.reduce((sum: number, e: any) => sum + (e.durationHours || 0), 0);
-  const avgDuration = entries.length ? totalHours / entries.length : 0;
-  const chartData = entries.map((e: any) => ({ date: e.time, startDateTime: e.startTime || e.time, hours: e.durationHours || 0 }));
-  report.sleepSummary = { totalHours, avgDuration, chartData };
-} else if (tracker === 'nursing') {
-  // Nursing entries may have durationLeft and durationRight
-  let chartData: Array<{ date: string, side: string, duration: number, volume: number | null }> = [];
-  let allDurations: number[] = [];
+          const totalHours = entries.reduce((sum: number, e: any) => sum + (e.durationHours || 0), 0);
+          const avgDuration = entries.length ? totalHours / entries.length : 0;
+          const chartData = entries.map((e: any) => ({
+            date: e.time,
+            startDateTime: e.startTime || e.time,
+            hours: e.durationHours || 0,
+          }));
+          report.sleepSummary = { totalHours, avgDuration, chartData };
+        } else if (tracker === 'nursing') {
+          let chartData: Array<{
+            date: string;
+            side: string;
+            duration: number;
+            volume: number | null;
+            startDateTime?: string;
+          }> = [];
+          let allDurations: number[] = [];
 
-  entries.forEach((e: any) => {
-    if (e.durationLeft && e.durationLeft > 0) {
-      chartData.push({
-        date: e.startTime,
-        startDateTime: e.startTime,
-        side: 'left',
-        duration: e.durationLeft,
-        volume: 0
-      });
-      allDurations.push(e.durationLeft);
-    }
-    if (e.durationRight && e.durationRight > 0) {
-      chartData.push({
-        date: e.startTime,
-        startDateTime: e.startTime,
-        side: 'right',
-        duration: e.durationRight,
-        volume: 0
-      });
-      allDurations.push(e.durationRight);
-    }
-  });
+          entries.forEach((e: any) => {
+            if (e.durationLeft && e.durationLeft > 0) {
+              chartData.push({
+                date: e.startTime,
+                startDateTime: e.startTime,
+                side: 'left',
+                duration: e.durationLeft,
+                volume: 0,
+              });
+              allDurations.push(e.durationLeft);
+            }
+            if (e.durationRight && e.durationRight > 0) {
+              chartData.push({
+                date: e.startTime,
+                startDateTime: e.startTime,
+                side: 'right',
+                duration: e.durationRight,
+                volume: 0,
+              });
+              allDurations.push(e.durationRight);
+            }
+          });
 
-  const totalSessions = allDurations.length;
-  const avgDuration = totalSessions ? (allDurations.reduce((sum, d) => sum + d, 0) / totalSessions) : 0;
-  const avgVolume = 0; // No volume data in current nursing entries
-  report.nursingSummary = { totalSessions, avgDuration, avgVolume, chartData };
-
-} else if (tracker === 'bottle') {
-  const totalBottles = entries.length;
-  const avgVolume = entries.length ? (entries.reduce((sum: number, e: any) => sum + (e.volume || 0), 0) / entries.length) : 0;
-  const chartData = entries.map((e: any) => ({ date: e.time, startDateTime: e.time, volume: e.volume || 0 }));
-  report.bottleSummary = { totalBottles, avgVolume, chartData };
-} else if (tracker === 'diaper') {
-  const wetCount = entries.filter((e: any) => e.type === 'wet').length;
-  const dirtyCount = entries.filter((e: any) => e.type === 'dirty').length;
-  const chartData = entries.map((e: any) => ({ date: e.time, startDateTime: e.time, type: e.type }));
-  report.diaperSummary = { wetCount, dirtyCount, chartData };
-} else if (tracker === 'solids') {
-  const totalFeedings = entries.length;
-  const avgAmount = entries.length ? (entries.reduce((sum: number, e: any) => sum + (e.amount || 0), 0) / entries.length) : 0;
-  const chartData = entries.map((e: any) => ({ date: e.time, startDateTime: e.time, amount: e.amount || 0 }));
-  report.solidsSummary = { totalFeedings, avgAmount, chartData };
-} else if (tracker === 'medicine') {
-  const totalDoses = entries.length;
-  const medicinesGiven = Array.from(new Set(entries.map((e: any) => e.medicineName).filter(Boolean)));
-  const chartData = entries.map((e: any) => ({ date: e.time, startDateTime: e.time, medicineName: e.medicineName || '' }));
-  report.medicineSummary = { totalDoses, medicinesGiven, chartData };
-} else if (tracker === 'growth') {
-  // Only latest entry matters
-  const sorted = entries.sort((a: any, b: any) => new Date(b.time).getTime() - new Date(a.time).getTime());
-  const latest = sorted[0] || {};
-  const chartData = entries.map((e: any) => ({ date: e.time, startDateTime: e.time, weight: e.weight, height: e.height }));
-  report.growthSummary = { latestWeight: latest.weight, latestHeight: latest.height, chartData };
-} else if (tracker === 'potty') {
-  const peeCount = entries.filter((e: any) => e.type === 'pee').length;
-  const poopCount = entries.filter((e: any) => e.type === 'poop').length;
-  const chartData = entries.map((e: any) => ({ date: e.time, startDateTime: e.time, type: e.type }));
-  report.pottySummary = { peeCount, poopCount, chartData };
-} else if (tracker === 'temperature') {
-  const readingsCount = entries.length;
-  const avgTemp = entries.length ? (entries.reduce((sum: number, e: any) => sum + (e.temperature || 0), 0) / entries.length) : 0;
-  const chartData = entries.map((e: any) => ({ date: e.time, startDateTime: e.time, temperature: e.temperature || 0 }));
-  report.temperatureSummary = { readingsCount, avgTemp, chartData };
-}
-
+          const totalSessions = allDurations.length;
+          const avgDuration = totalSessions ? allDurations.reduce((sum, d) => sum + d, 0) / totalSessions : 0;
+          const avgVolume = 0;
+          report.nursingSummary = {
+            totalSessions,
+            avgDuration,
+            avgVolume,
+            chartData,
+          };
+        } else if (tracker === 'bottle') {
+          const totalBottles = entries.length;
+          const avgVolume = entries.length
+            ? entries.reduce((sum: number, e: any) => sum + (e.volume || 0), 0) / entries.length
+            : 0;
+          const chartData = entries.map((e: any) => ({
+            date: e.time,
+            startDateTime: e.time,
+            volume: e.volume || 0,
+          }));
+          report.bottleSummary = { totalBottles, avgVolume, chartData };
+        } else if (tracker === 'diaper') {
+          const wetCount = entries.filter((e: any) => e.type === 'wet').length;
+          const dirtyCount = entries.filter((e: any) => e.type === 'dirty').length;
+          const chartData = entries.map((e: any) => ({
+            date: e.time,
+            startDateTime: e.time,
+            type: e.type,
+          }));
+          report.diaperSummary = { wetCount, dirtyCount, chartData };
+        } else if (tracker === 'solids') {
+          const totalFeedings = entries.length;
+          const avgAmount = entries.length
+            ? entries.reduce((sum: number, e: any) => sum + (e.amount || 0), 0) / entries.length
+            : 0;
+          const chartData = entries.map((e: any) => ({
+            date: e.time,
+            startDateTime: e.time,
+            amount: e.amount || 0,
+          }));
+          report.solidsSummary = { totalFeedings, avgAmount, chartData };
+        } else if (tracker === 'medicine') {
+          const totalDoses = entries.length;
+          const medicinesGiven = Array.from(new Set(entries.map((e: any) => e.medicineName).filter(Boolean)));
+          const chartData = entries.map((e: any) => ({
+            date: e.time,
+            startDateTime: e.time,
+            medicineName: e.medicineName || '',
+          }));
+          report.medicineSummary = { totalDoses, medicinesGiven, chartData };
+        } else if (tracker === 'growth') {
+          const sorted = entries.sort((a: any, b: any) => new Date(b.time).getTime() - new Date(a.time).getTime());
+          const latest = sorted[0] || {};
+          const chartData = entries.map((e: any) => ({
+            date: e.time,
+            startDateTime: e.time,
+            weight: e.weight,
+            height: e.height,
+          }));
+          report.growthSummary = {
+            latestWeight: latest.weight,
+            latestHeight: latest.height,
+            chartData,
+          };
+        } else if (tracker === 'potty') {
+          const peeCount = entries.filter((e: any) => e.type === 'pee').length;
+          const poopCount = entries.filter((e: any) => e.type === 'poop').length;
+          const chartData = entries.map((e: any) => ({
+            date: e.time,
+            startDateTime: e.time,
+            type: e.type,
+          }));
+          report.pottySummary = { peeCount, poopCount, chartData };
+        } else if (tracker === 'temperature') {
+          const readingsCount = entries.length;
+          const avgTemp = entries.length
+            ? entries.reduce((sum: number, e: any) => sum + (e.temperature || 0), 0) / entries.length
+            : 0;
+          const chartData = entries.map((e: any) => ({
+            date: e.time,
+            startDateTime: e.time,
+            temperature: e.temperature || 0,
+          }));
+          report.temperatureSummary = { readingsCount, avgTemp, chartData };
+        }
       }
       return createApiResponse(200, report);
-    }
-    else if (path === '/reports' && httpMethod === 'OPTIONS') {
-      // CORS preflight handler for /reports
-      return createApiResponse(200, {});
-    }
-    // --- Notes Route ---
-    else if (path === '/notes' && httpMethod === 'GET') {
-      // GET /notes?profileId=...
+    } else if (normalizedPath === '/notes' && httpMethod === 'GET') {
       const { profileId } = event.queryStringParameters || {};
       if (!profileId) {
-        return createApiResponse(400, { message: 'Missing required query parameter: profileId' });
+        return createApiResponse(400, {
+          message: 'Missing required query parameter: profileId',
+        });
       }
-      // Query all tracker entries for this babyId (profileId)
       const command = new QueryCommand({
         TableName: trackerEntriesTable,
         KeyConditionExpression: 'babyId = :bid',
         ExpressionAttributeValues: {
           ':bid': profileId,
         },
-        ScanIndexForward: false, // newest first
+        ScanIndexForward: false,
       });
       const result = await docClient.send(command);
-      // Only keep entries that have a non-empty notes field
-      // Always include 'time' in the response. If missing, set to null to avoid 'Invalid Date' in UI.
       const notesEntries = (result.Items || [])
         .filter((entry: any) => entry.notes && entry.notes.trim() !== '')
         .map((entry: any) => ({
           id: entry.entryId,
           trackerType: entry.trackerType,
-          time: entry.time !== undefined ? entry.time : null,
+          time: entry.time ?? entry.startTime ?? entry.endTime ?? null,
           notes: entry.notes,
           profileId: entry.babyId,
         }));
-      // Sort by time descending
       notesEntries.sort((a: any, b: any) => new Date(b.time).getTime() - new Date(a.time).getTime());
       return createApiResponse(200, notesEntries);
-    }
-    else if (path === '/notes' && httpMethod === 'OPTIONS') {
-      // CORS preflight handler for /notes
-      return createApiResponse(200, {});
-    }
-    // --- Checklist Routes ---
-    else if (path === '/checklist' && httpMethod === 'GET') {
-      // Fetch ONLY the user's checklist items (custom + completion)
-      const command = new QueryCommand({
-        TableName: checklistStatusTable,
-        KeyConditionExpression: 'userId = :uid',
-        ExpressionAttributeValues: { ':uid': userId },
-      });
-      const result = await docClient.send(command);
-      const userChecklist = result.Items || [];
-      return createApiResponse(200, userChecklist);
-    }
-    else if (path === '/checklist' && httpMethod === 'POST') {
-      // Create a new custom checklist item for the user
+    } else if (normalizedPath === '/checklist' && httpMethod === 'POST') {
       console.log(`ROUTE: POST /checklist for user ${userId}`);
       if (!body || !body.text || typeof body.week !== 'number' || !body.profileId) {
         return createApiResponse(400, {
           message: 'Missing required fields: text, week, profileId',
         });
       }
-      // Generate a unique itemId for the custom item
       const itemId = `custom_${Date.now()}_${randomUUID().substring(0, 8)}`;
       const newItem = {
         userId: userId,
@@ -475,7 +538,7 @@ export const handler: Handler = async (
         text: body.text,
         week: body.week,
         profileId: body.profileId,
-        completed: !!body.completed, // Default to false if not provided
+        completed: !!body.completed,
         createdAt: new Date().toISOString(),
       };
       const command = new PutCommand({
@@ -484,32 +547,12 @@ export const handler: Handler = async (
       });
       await docClient.send(command);
       return createApiResponse(201, newItem);
-    }
-    else if (path === '/checklist' && httpMethod === 'OPTIONS') {
-      // CORS preflight handler for /checklist
-      return createApiResponse(200, {});
-    }
-    else if (path === '/checklist/status' && httpMethod === 'GET') {
-      console.log(`ROUTE: GET /checklist/status for user ${userId}`);
-      const command = new QueryCommand({
-        TableName: checklistStatusTable,
-        KeyConditionExpression: 'userId = :uid',
-        ExpressionAttributeValues: { ':uid': userId },
-      });
-      const result = await docClient.send(command);
-      // Map result to expected frontend format if needed
-      const statuses = (result.Items || []).map((item) => ({
-        itemId: item.itemId,
-        completed: item.completed,
-      }));
-      return createApiResponse(200, statuses);
-    } else if (path === '/checklist/status/{itemId}' && httpMethod === 'PUT') {
+    } else if (normalizedPath === '/checklist/status/{itemId}' && httpMethod === 'PUT') {
       const itemId = pathParameters?.itemId;
       console.log(`ROUTE: PUT /checklist/status/${itemId} for user ${userId}`);
       if (!itemId || body === null || typeof body.completed !== 'boolean') {
         return createApiResponse(400, {
-          message:
-            'Missing itemId or invalid body (expected { completed: boolean })',
+          message: 'Missing itemId or invalid body (expected { completed: boolean })',
         });
       }
       const command = new UpdateCommand({
@@ -524,10 +567,7 @@ export const handler: Handler = async (
       });
       await docClient.send(command);
       return createApiResponse(200, { success: true });
-    }
-
-    // --- Default Not Found ---
-    else {
+    } else {
       console.log(`ROUTE: Not Found - ${httpMethod} ${path}`);
       return createApiResponse(404, {
         message: `Not Found: ${httpMethod} ${event.path}`,

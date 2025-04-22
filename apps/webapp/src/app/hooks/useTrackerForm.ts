@@ -6,8 +6,8 @@ interface UseTrackerFormOptions<T> {
   selectedProfileId: string | undefined;
   trackerType: string;
   fetchEntries: () => Promise<void>;
-  buildEntryData: () => T | null; // returns null if invalid
-  validate: () => string | null; // returns error string if invalid, null if valid
+  buildEntryData: () => T | null; 
+  validate: () => string | null; 
   resetForm: () => void;
   apiClient: {
     post: <R>(url: string, data: any) => Promise<R>;

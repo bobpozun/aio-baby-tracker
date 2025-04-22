@@ -55,7 +55,7 @@ export default defineConfig({
     port: 4200,
     host: 'localhost',
     fs: {
-      // Allow serving files from one level up to the project root
+      
       allow: ['..'],
     },
   },
@@ -71,8 +71,8 @@ export default defineConfig({
     },
   },
   plugins: [react(), nxViteTsPaths()],
-  // Uncomment this if you are using workers.
-  // worker: {
-  //  plugins: [ nxViteTsPaths() ],
-  // },
+  
+  
+  
+  
 });

@@ -1,6 +1,6 @@
 import { apiGet, apiPost, apiPut, apiDelete, clearAuthToken } from './apiTestClient';
 
-// Define the expected shape of related objects
+
 interface BabyProfile {
   id: string;
   name: string;
@@ -9,7 +9,7 @@ interface BabyProfile {
 
 interface GrowthEntry {
   entryId: string;
-  date: string; // YYYY-MM-DD
+  date: string; 
   weight?: number;
   weightUnit?: 'kg' | 'lb';
   height?: number;
@@ -27,7 +27,7 @@ describe('Growth Tracker API Endpoints', () => {
   let createdEntryId: string | null = null;
 
   beforeAll(async () => {
-    clearAuthToken(); // Ensure fresh login
+    clearAuthToken(); 
     const profileData = { name: `GrowthTest Baby ${Date.now()}`, birthday: '2025-02-07' };
     try {
       const response: BabyProfile = await apiPost('/profiles', profileData);
@@ -55,7 +55,7 @@ describe('Growth Tracker API Endpoints', () => {
     if (!testProfileId) throw new Error('Test setup failed: testProfileId is null.');
 
     const entryData = {
-      date: new Date().toISOString().split('T')[0], // Get YYYY-MM-DD
+      date: new Date().toISOString().split('T')[0], 
       weight: 5.5,
       weightUnit: 'kg',
       height: 58,
@@ -74,7 +74,7 @@ describe('Growth Tracker API Endpoints', () => {
     expect(response.weightUnit).toBe(entryData.weightUnit);
     expect(response.height).toBe(entryData.height);
     expect(response.heightUnit).toBe(entryData.heightUnit);
-    expect(response.headCircumference).toBeUndefined(); // Check optional field
+    expect(response.headCircumference).toBeUndefined(); 
     expect(response.notes).toBe(entryData.notes);
     expect(response.createdAt).toBeDefined();
 
@@ -105,7 +105,7 @@ describe('Growth Tracker API Endpoints', () => {
 
     await apiDelete(`/profiles/${testProfileId}/trackers/growth/${createdEntryId}`);
 
-    // Verify by fetching again
+    
     const getResponse: GrowthEntry[] = await apiGet(`/profiles/${testProfileId}/trackers/growth`);
     const deletedEntry = getResponse.find(e => e.entryId === createdEntryId);
     expect(deletedEntry).toBeUndefined();

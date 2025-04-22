@@ -68,6 +68,30 @@ The following scripts are available in the root `package.json`:
 - `yarn format`: Formats all project files using Prettier (`prettier --write .`).
 - `yarn graph`: Opens the Nx project dependency graph viewer (`nx graph`).
 - `yarn repomix`: Packages the entire repo into one file for passing to an AI model
+- `yarn remove-comments`: Removes all comments from code files except those containing TODO, FIXME, or placeholder.
+- `yarn generate-demo-data`: Generates a year of demo tracker data for a user with 3 children (see below for setup and usage).
+
+## Generating Demo Data
+
+You can generate a year of demo tracker data for a user (with 3 children of varying ages) using the provided script:
+
+1. **Configure environment variables:**
+   - Copy `scripts/.env.example` to `scripts/.env` if you haven't already.
+   - Fill in your EMAIL and PASSWORD for the demo user in `scripts/.env`. Optionally, set `API_URL` if you want to override the default backend URL.
+
+2. **Run the script:**
+   - Using Yarn:
+     ```bash
+     yarn generate-demo-data
+     ```
+   - Or using npx/ts-node directly:
+     ```bash
+     npx ts-node scripts/generate-demo-data.ts
+     ```
+
+   The script will authenticate, create demo child profiles, and generate tracker entries for each child.
+
+---
 
 ## Code Formatting
 

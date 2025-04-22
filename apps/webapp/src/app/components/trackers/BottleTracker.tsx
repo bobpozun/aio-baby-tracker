@@ -2,114 +2,105 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { apiClient } from '../../utils/apiClient';
 import { useTrackerLogic } from '../../hooks/useTrackerLogic';
 import { useTrackerForm } from '../../hooks/useTrackerForm';
-// Import date utils
-import {
-  getCurrentDateTimeLocal,
-  formatDateTimeLocalInput,
-} from '../../utils/dateUtils';
 
-// Interface remains specific to this tracker
+import { getCurrentDateTimeLocal, formatDateTimeLocalInput } from '../../utils/dateUtils';
+
+
 interface BottleEntry {
   entryId: string;
   time: string;
-  amount: number;
+  volume: number;
   unit: 'ml' | 'oz';
   type: 'formula' | 'breast_milk' | 'other';
   notes?: string;
   babyId: string;
 }
 
-// Define the structure for the data part of a new entry
-type NewBottleEntryData = Omit<BottleEntry, 'entryId' | 'babyId'>;
+
+type NewBottleEntryData = Omit<BottleEntry, 'entryId' | 'babyId'>; 
 
 const BottleTracker: React.FC = () => {
-  // Use the custom hook for shared logic
+  
   const {
     entries,
-    isLoading, // Combined loading state from hook
-    error: displayError, // Combined error state from hook
+    isLoading, 
+    error: displayError, 
     editingEntryId,
     setEditingEntryId,
-    selectedProfile, // Get the actual profile object
+    selectedProfile, 
     profileName,
-    fetchEntries, // Get fetch function from hook
-    handleDeleteEntry, // Get delete function from hook
+    fetchEntries, 
+    handleDeleteEntry, 
     hasFetchedEmptyData,
   } = useTrackerLogic<BottleEntry>({ trackerType: 'bottle' });
 
-  // Keep component-specific form state
+  
   const [time, setTime] = useState(getCurrentDateTimeLocal());
-  const [amount, setAmount] = useState('');
+  const [volume, setVolume] = useState('');
   const [unit, setUnit] = useState<'ml' | 'oz'>('ml');
-const [type, setType] = useState<'formula' | 'breast_milk' | 'other'>('formula');
-const [notes, setNotes] = useState('');
-// useTrackerForm handles isSubmitting and formError now
+  const [type, setType] = useState<'formula' | 'breast_milk' | 'other'>('formula');
+  const [notes, setNotes] = useState('');
+  
 
-  // Function to reset form fields
+  
   const resetForm = useCallback(() => {
     console.log('BottleTracker: resetForm called');
     setTime(getCurrentDateTimeLocal());
-    setAmount('');
+    setVolume('');
     setUnit('ml');
     setType('formula');
     setNotes('');
-    setEditingEntryId(null); // Use setter from hook
+    setEditingEntryId(null); 
     setFormError(null);
   }, [setEditingEntryId]);
 
-  // Effect to reset form when selected profile changes (after loading)
-   useEffect(() => {
+  
+  useEffect(() => {
     if (!isLoading && selectedProfile) {
-        resetForm();
+      resetForm();
     }
-     if (!isLoading && !selectedProfile) {
-        resetForm();
+    if (!isLoading && !selectedProfile) {
+      resetForm();
     }
   }, [entries, isLoading]);
 
-   // Effect to fetch entries when selected profile changes (after loading)
-   useEffect(() => {
+  
+  useEffect(() => {
     if (selectedProfile && !isLoading && entries.length === 0 && !hasFetchedEmptyData) {
       console.log(`BottleTracker: Fetching entries for profile ${selectedProfile.id}`);
       fetchEntries();
     }
   }, [selectedProfile?.id, isLoading]);
 
-
-  // Function to set the form state for editing an entry
+  
   const handleEditClick = (entry: BottleEntry) => {
-    setEditingEntryId(entry.entryId); // Use setter from hook
+    setEditingEntryId(entry.entryId); 
     setTime(formatDateTimeLocalInput(entry.time));
-    setAmount(entry.amount.toString());
+    setVolume(entry.volume.toString());
     setUnit(entry.unit);
     setType(entry.type);
     setNotes(entry.notes || '');
     setFormError(null);
   };
 
-  // useTrackerForm handles submit logic
+  
   const validate = () => {
     if (!selectedProfile) return 'No profile selected.';
-    if (!time || !amount) return 'Time and amount are required.';
-    if (isNaN(Number(amount)) || Number(amount) <= 0) return 'Amount must be a positive number.';
+    if (!time || !volume) return 'Time and volume are required.';
+    if (isNaN(Number(volume)) || Number(volume) <= 0) return 'Volume must be a positive number.';
     return null;
   };
   const buildEntryData = () => {
-    if (!time || !amount) return null;
+    if (!time || !volume) return null;
     return {
-      time: new Date(time).toISOString(),
-      amount: parseFloat(amount),
+      time, // Use ISO string directly
+      volume: parseFloat(volume),
       unit,
       type,
       notes: notes || undefined,
     };
   };
-  const {
-    isSubmitting,
-    formError,
-    handleSubmit,
-    setFormError,
-  } = useTrackerForm<NewBottleEntryData>({
+  const { isSubmitting, formError, handleSubmit, setFormError } = useTrackerForm<NewBottleEntryData>({
     editingEntryId,
     setEditingEntryId,
     selectedProfileId: selectedProfile?.id,
@@ -121,34 +112,30 @@ const [notes, setNotes] = useState('');
     apiClient,
   });
 
-  // Use combined loading state from hook for initial loading display
+  
   if (isLoading && !selectedProfile) {
     return <div>Loading profile data...</div>;
   }
 
-  // Use combined error state from hook for context errors
+  
   if (displayError && !selectedProfile) {
-     return <div style={{ color: 'red' }}>Error loading profiles: {displayError}</div>;
+    return <div style={{ color: 'red' }}>Error loading profiles: {displayError}</div>;
   }
 
   return (
     <div>
-      <h2>
-        Bottle Tracker {profileName ? `for ${profileName}` : '(Select Profile...)'}
-      </h2>
+      <h2>Bottle Tracker {profileName ? `for ${profileName}` : '(Select Profile...)'}</h2>
 
-      {/* Display form-specific errors */}
+      {}
       {formError && <p style={{ color: 'red' }}>Error: {formError}</p>}
-      {/* Display context/fetch errors if not form-related */}
+      {}
       {displayError && !formError && <p style={{ color: 'red' }}>Error: {displayError}</p>}
 
-      {/* Render sections only if a profile is selected */}
+      {}
       {selectedProfile ? (
         <>
           <section>
-            <h3>
-              {editingEntryId ? 'Edit Bottle Feeding' : 'Add New Bottle Feeding'}
-            </h3>
+            <h3>{editingEntryId ? 'Edit Bottle Feeding' : 'Add New Bottle Feeding'}</h3>
             <form onSubmit={handleSubmit}>
               <div>
                 <label htmlFor="bottleTime">Time:</label>
@@ -166,27 +153,19 @@ const [notes, setNotes] = useState('');
                   type="number"
                   id="bottleAmount"
                   min="0"
-                  step="any" // Allow decimals
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
+                  step="any" 
+                  value={volume}
+                  onChange={(e) => setVolume(e.target.value)}
                   required
                 />
-                <select
-                  value={unit}
-                  onChange={(e) => setUnit(e.target.value as 'ml' | 'oz')}
-                >
+                <select value={unit} onChange={(e) => setUnit(e.target.value as 'ml' | 'oz')}>
                   <option value="ml">ml</option>
                   <option value="oz">oz</option>
                 </select>
               </div>
               <div>
                 <label htmlFor="bottleType">Type:</label>
-                <select
-                  value={type}
-                  onChange={(e) =>
-                    setType(e.target.value as 'formula' | 'breast_milk' | 'other')
-                  }
-                >
+                <select value={type} onChange={(e) => setType(e.target.value as 'formula' | 'breast_milk' | 'other')}>
                   <option value="formula">Formula</option>
                   <option value="breast_milk">Breast Milk</option>
                   <option value="other">Other</option>
@@ -194,11 +173,7 @@ const [notes, setNotes] = useState('');
               </div>
               <div>
                 <label htmlFor="bottleNotes">Notes:</label>
-                <textarea
-                  id="bottleNotes"
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                />
+                <textarea id="bottleNotes" value={notes} onChange={(e) => setNotes(e.target.value)} />
               </div>
               <button type="submit" disabled={isSubmitting || !selectedProfile}>
                 {isSubmitting
@@ -210,12 +185,7 @@ const [notes, setNotes] = useState('');
                   : 'Add Bottle Entry'}
               </button>
               {editingEntryId && (
-                <button
-                  type="button"
-                  onClick={resetForm}
-                  disabled={isSubmitting}
-                  style={{ marginLeft: 10 }}
-                >
+                <button type="button" onClick={resetForm} disabled={isSubmitting} style={{ marginLeft: 10 }}>
                   Cancel Edit
                 </button>
               )}
@@ -225,10 +195,8 @@ const [notes, setNotes] = useState('');
           <hr />
 
           <section>
-            <h3>
-              Bottle Log {profileName ? `for ${profileName}` : ''}
-            </h3>
-            {/* Use combined isLoading for log loading state */}
+            <h3>Bottle Log {profileName ? `for ${profileName}` : ''}</h3>
+            {}
             {isLoading && entries.length === 0 ? (
               <p>Loading log...</p>
             ) : entries.length === 0 && hasFetchedEmptyData ? (
@@ -238,66 +206,69 @@ const [notes, setNotes] = useState('');
             ) : (
               <ul>
                 {entries.map((entry) => {
-                    const entryDate = new Date(entry.time);
-                    const isDateValid = !isNaN(entryDate.getTime());
-                    // Safely format type - check if it's a string before replacing
-                    const formattedType = typeof entry.type === 'string' ? entry.type.replace('_', ' ') : 'N/A';
-                    return (
-                      <li key={entry.entryId}>
-                        <strong>
-                          {entry.amount} {entry.unit}
-                        </strong>
-                        ({formattedType}) {/* Use safe formatted type */}
-                        <br />
-                        Time: {isDateValid ? entryDate.toLocaleString() : 'Invalid Date'}
-                        {entry.notes && (
-                          <>
-                            <br />
-                            Notes: {entry.notes}
-                          </>
-                        )}
-                        <div style={{ marginTop: 5 }}>
-                          <button
-                            onClick={() => handleEditClick(entry)}
-                            disabled={isLoading || isSubmitting || !!editingEntryId}
-                            style={{
-                              marginRight: 10,
-                              background: 'none',
-                              border: 'none',
+                  const entryDate = new Date(entry.time);
+                  const isDateValid = !isNaN(entryDate.getTime());
+                  const volume = entry.volume ?? null;
+                  const unit = entry.unit ?? (entry.volume ? 'ml' : null);
+                  const type = entry.type ?? 'formula';
+                  const formattedType = typeof type === 'string' ? type.replace('_', ' ') : 'N/A';
+                  return (
+                    <li key={entry.entryId}>
+                      <strong>{volume !== null && volume !== undefined ? `${volume} ${unit}` : '(N/A)'}</strong>
+                      {type ? ` (${formattedType})` : ''}
+                      <br />
+                      Time:{' '}
+                      {isDateValid
+                        ? entryDate.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
+                        : 'Invalid Date'}
+                      {entry.notes && (
+                        <>
+                          <br />
+                          Notes: {entry.notes}
+                        </>
+                      )}
+                      <div style={{ marginTop: 5 }}>
+                        <button
+                          onClick={() => handleEditClick(entry)}
+                          disabled={isLoading || isSubmitting || !!editingEntryId}
+                          style={{
+                            marginRight: 10,
+                            background: 'none',
+                            border: 'none',
                             cursor: 'pointer',
                             padding: '2px 5px',
                             color: 'var(--primary-color)',
                           }}
                           title="Edit entry"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => handleDeleteEntry(entry.entryId)}
-                            disabled={isLoading || isSubmitting || !!editingEntryId}
-                            style={{
-                              marginLeft: 10,
-                              color: 'red',
-                              background: 'none',
-                              border: 'none',
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDeleteEntry(entry.entryId)}
+                          disabled={isLoading || isSubmitting || !!editingEntryId}
+                          style={{
+                            marginLeft: 10,
+                            color: 'red',
+                            background: 'none',
+                            border: 'none',
                             cursor: 'pointer',
                             padding: '2px 5px',
-                            }}
-                            title="Delete entry"
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </li>
-                    );
+                          }}
+                          title="Delete entry"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </li>
+                  );
                 })}
               </ul>
             )}
           </section>
         </>
       ) : (
-         // Message when no profile is selected (after loading is complete)
-         <p style={{ color: 'orange' }}>Please select a baby profile first.</p>
+        
+        <p style={{ color: 'orange' }}>Please select a baby profile first.</p>
       )}
     </div>
   );

@@ -1,6 +1,6 @@
 import { apiGet, apiPost, apiPut, apiDelete, clearAuthToken } from './apiTestClient';
 
-// Define the expected shape of related objects
+
 interface BabyProfile {
   id: string;
   name: string;
@@ -24,7 +24,7 @@ describe('Nursing Tracker API Endpoints', () => {
   let createdEntryId: string | null = null;
 
   beforeAll(async () => {
-    clearAuthToken(); // Ensure fresh login
+    clearAuthToken(); 
     const profileData = { name: `NursingTest Baby ${Date.now()}`, birthday: '2025-02-02' };
     try {
       const response: BabyProfile = await apiPost('/profiles', profileData);
@@ -99,7 +99,7 @@ describe('Nursing Tracker API Endpoints', () => {
 
     await apiDelete(`/profiles/${testProfileId}/trackers/nursing/${createdEntryId}`);
 
-    // Verify by fetching again
+    
     const getResponse: NursingEntry[] = await apiGet(`/profiles/${testProfileId}/trackers/nursing`);
     const deletedEntry = getResponse.find(e => e.entryId === createdEntryId);
     expect(deletedEntry).toBeUndefined();

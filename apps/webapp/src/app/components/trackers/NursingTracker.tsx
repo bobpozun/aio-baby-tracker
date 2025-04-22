@@ -2,50 +2,47 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { apiClient } from '../../utils/apiClient';
 import { useTrackerLogic } from '../../hooks/useTrackerLogic';
 import { useTrackerForm } from '../../hooks/useTrackerForm';
-// Import date utils
-import {
-  getCurrentDateTimeLocal,
-  formatDateTimeLocalInput,
-} from '../../utils/dateUtils';
 
-// Interface remains specific to this tracker
+import { getCurrentDateTimeLocal, formatDateTimeLocalInput } from '../../utils/dateUtils';
+
+
 interface NursingEntry {
   entryId: string;
-  startTime: string;
-  durationLeft?: number; // minutes
-  durationRight?: number; // minutes
+  time: string; // ISO string
+  durationLeft?: number;
+  durationRight?: number;
   lastSide?: 'left' | 'right';
   notes?: string;
   babyId: string;
 }
 
-// Define the structure for the data part of a new entry (excluding babyId/entryId)
+
 type NewNursingEntryData = Omit<NursingEntry, 'entryId' | 'babyId'>;
 
 const NursingTracker: React.FC = () => {
-  // Use the custom hook for shared logic
+  
   const {
     entries,
-    isLoading, // Combined loading state from hook
-    error: displayError, // Combined error state from hook
+    isLoading, 
+    error: displayError, 
     editingEntryId,
     setEditingEntryId,
-    selectedProfile, // Get the actual profile object
+    selectedProfile, 
     profileName,
-    fetchEntries, // Get fetch function from hook
-    handleDeleteEntry, // Get delete function from hook
+    fetchEntries, 
+    handleDeleteEntry, 
     hasFetchedEmptyData,
   } = useTrackerLogic<NursingEntry>({ trackerType: 'nursing' });
 
-  // Keep component-specific form state
-  const [startTime, setStartTime] = useState(getCurrentDateTimeLocal());
+  
+  const [time, setStartTime] = useState(getCurrentDateTimeLocal());
   const [durationLeft, setDurationLeft] = useState('');
   const [durationRight, setDurationRight] = useState('');
   const [lastSide, setLastSide] = useState<'left' | 'right' | ''>('');
   const [notes, setNotes] = useState('');
-  // useTrackerForm handles isSubmitting and formError now
+  
 
-  // Function to reset form fields
+  
   const resetForm = useCallback(() => {
     console.log('NursingTracker: resetForm called');
     setStartTime(getCurrentDateTimeLocal());
@@ -53,33 +50,32 @@ const NursingTracker: React.FC = () => {
     setDurationRight('');
     setLastSide('');
     setNotes('');
-    setEditingEntryId(null); // Use setter from hook
+    setEditingEntryId(null); 
     setFormError(null);
   }, [setEditingEntryId]);
 
-  // Effect to reset form when selected profile changes (after loading)
-   useEffect(() => {
+  
+  useEffect(() => {
     if (!isLoading && selectedProfile) {
-        resetForm();
+      resetForm();
     }
-     if (!isLoading && !selectedProfile) {
-        resetForm();
+    if (!isLoading && !selectedProfile) {
+      resetForm();
     }
   }, [entries, isLoading]);
 
-   // Effect to fetch entries when selected profile changes (after loading)
-   useEffect(() => {
+  
+  useEffect(() => {
     if (selectedProfile && !isLoading && entries.length === 0 && !hasFetchedEmptyData) {
       console.log(`NursingTracker: Fetching entries for profile ${selectedProfile.id}`);
       fetchEntries();
     }
   }, [selectedProfile?.id, isLoading]);
 
-
-  // Function to set the form state for editing an entry
+  
   const handleEditClick = (entry: NursingEntry) => {
-    setEditingEntryId(entry.entryId); // Use setter from hook
-    setStartTime(formatDateTimeLocalInput(entry.startTime));
+    setEditingEntryId(entry.entryId); 
+    setStartTime(formatDateTimeLocalInput(entry.time));
     setDurationLeft(entry.durationLeft?.toString() || '');
     setDurationRight(entry.durationRight?.toString() || '');
     setLastSide(entry.lastSide || '');
@@ -87,30 +83,27 @@ const NursingTracker: React.FC = () => {
     setFormError(null);
   };
 
-  // useTrackerForm handles submit logic
+  
   const validate = () => {
     if (!selectedProfile) return 'No profile selected.';
-    if (!startTime || (!durationLeft && !durationRight)) return 'Start time and at least one duration are required.';
-    if (durationLeft && (isNaN(Number(durationLeft)) || Number(durationLeft) < 0)) return 'Left duration must be a non-negative number.';
-    if (durationRight && (isNaN(Number(durationRight)) || Number(durationRight) < 0)) return 'Right duration must be a non-negative number.';
+    if (!time || (!durationLeft && !durationRight)) return 'Start time and at least one duration are required.';
+    if (durationLeft && (isNaN(Number(durationLeft)) || Number(durationLeft) < 0))
+      return 'Left duration must be a non-negative number.';
+    if (durationRight && (isNaN(Number(durationRight)) || Number(durationRight) < 0))
+      return 'Right duration must be a non-negative number.';
     return null;
   };
   const buildEntryData = () => {
-    if (!startTime || (!durationLeft && !durationRight)) return null;
+    if (!time || (!durationLeft && !durationRight)) return null;
     return {
-      startTime: new Date(startTime).toISOString(),
+      time: new Date(time).toISOString(),
       durationLeft: durationLeft ? parseInt(durationLeft, 10) : undefined,
       durationRight: durationRight ? parseInt(durationRight, 10) : undefined,
       lastSide: lastSide || undefined,
       notes: notes || undefined,
     };
   };
-  const {
-    isSubmitting,
-    formError,
-    handleSubmit,
-    setFormError,
-  } = useTrackerForm<NewNursingEntryData>({
+  const { isSubmitting, formError, handleSubmit, setFormError } = useTrackerForm<NewNursingEntryData>({
     editingEntryId,
     setEditingEntryId,
     selectedProfileId: selectedProfile?.id,
@@ -126,41 +119,37 @@ const NursingTracker: React.FC = () => {
     return (entry.durationLeft || 0) + (entry.durationRight || 0);
   };
 
-  // Use combined loading state from hook for initial loading display
+  
   if (isLoading && !selectedProfile) {
     return <div>Loading profile data...</div>;
   }
 
-  // Use combined error state from hook for context errors
+  
   if (displayError && !selectedProfile) {
-     return <div style={{ color: 'red' }}>Error loading profiles: {displayError}</div>;
+    return <div style={{ color: 'red' }}>Error loading profiles: {displayError}</div>;
   }
 
   return (
     <div>
-      <h2>
-        Nursing Tracker {profileName ? `for ${profileName}` : '(Select Profile...)'}
-      </h2>
+      <h2>Nursing Tracker {profileName ? `for ${profileName}` : '(Select Profile...)'}</h2>
 
-      {/* Display form-specific errors */}
+      {}
       {formError && <p style={{ color: 'red' }}>Error: {formError}</p>}
-      {/* Display context/fetch errors if not form-related */}
+      {}
       {displayError && !formError && <p style={{ color: 'red' }}>Error: {displayError}</p>}
 
-      {/* Render sections only if a profile is selected */}
+      {}
       {selectedProfile ? (
         <>
           <section>
-            <h3>
-              {editingEntryId ? 'Edit Nursing Session' : 'Add New Nursing Session'}
-            </h3>
+            <h3>{editingEntryId ? 'Edit Nursing Session' : 'Add New Nursing Session'}</h3>
             <form onSubmit={handleSubmit}>
               <div>
                 <label htmlFor="nursingStartTime">Start Time:</label>
                 <input
                   type="datetime-local"
                   id="nursingStartTime"
-                  value={startTime}
+                  value={time}
                   onChange={(e) => setStartTime(e.target.value)}
                   required
                 />
@@ -190,9 +179,7 @@ const NursingTracker: React.FC = () => {
                 <select
                   id="lastSide"
                   value={lastSide}
-                  onChange={(e) =>
-                    setLastSide(e.target.value as 'left' | 'right' | '')
-                  }
+                  onChange={(e) => setLastSide(e.target.value as 'left' | 'right' | '')}
                 >
                   <option value="">N/A</option>
                   <option value="left">Left</option>
@@ -201,11 +188,7 @@ const NursingTracker: React.FC = () => {
               </div>
               <div>
                 <label htmlFor="nursingNotes">Notes:</label>
-                <textarea
-                  id="nursingNotes"
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                />
+                <textarea id="nursingNotes" value={notes} onChange={(e) => setNotes(e.target.value)} />
               </div>
               <button type="submit" disabled={isSubmitting || !selectedProfile}>
                 {isSubmitting
@@ -217,12 +200,7 @@ const NursingTracker: React.FC = () => {
                   : 'Add Nursing Session'}
               </button>
               {editingEntryId && (
-                <button
-                  type="button"
-                  onClick={resetForm}
-                  disabled={isSubmitting}
-                  style={{ marginLeft: '10px' }}
-                >
+                <button type="button" onClick={resetForm} disabled={isSubmitting} style={{ marginLeft: '10px' }}>
                   Cancel Edit
                 </button>
               )}
@@ -232,10 +210,8 @@ const NursingTracker: React.FC = () => {
           <hr />
 
           <section>
-            <h3>
-              Nursing Log {profileName ? `for ${profileName}` : ''}
-            </h3>
-             {/* Use combined isLoading for log loading state */}
+            <h3>Nursing Log {profileName ? `for ${profileName}` : ''}</h3>
+            {}
             {isLoading && entries.length === 0 ? (
               <p>Loading log...</p>
             ) : entries.length === 0 && hasFetchedEmptyData ? (
@@ -245,65 +221,76 @@ const NursingTracker: React.FC = () => {
             ) : (
               <ul>
                 {entries.map((entry) => {
-                    const startDate = new Date(entry.startTime);
-                    const isDateValid = !isNaN(startDate.getTime());
+                  const startDate = new Date(entry.time);
+                  const isDateValid = !isNaN(startDate.getTime());
 
-                    return (
-                      <li key={entry.entryId}>
+                  return (
+                    <li key={entry.entryId}>
+                      <div>
                         <strong>Total Duration:</strong> {getTotalDuration(entry)} mins
-                        {entry.durationLeft && ` (L: ${entry.durationLeft}m)`}
-                        {entry.durationRight && ` (R: ${entry.durationRight}m)`}
-                        {entry.lastSide && ` (Last: ${entry.lastSide})`}
-                        <br />
-                        Start: {isDateValid ? startDate.toLocaleString() : 'Invalid Date'}
-                        {entry.notes && (
-                          <>
-                            <br />
-                            Notes: {entry.notes}
-                          </>
+                      </div>
+                      <div style={{ marginTop: '2px' }}>
+                        {typeof entry.durationLeft === 'number' && entry.durationLeft > 0 && (
+                          <span style={{ marginRight: '10px' }}>
+                            Left: <strong>{entry.durationLeft} min</strong>
+                          </span>
                         )}
-                        <div style={{ marginTop: '5px' }}>
-                          <button
-                            onClick={() => handleEditClick(entry)}
-                            disabled={isLoading || isSubmitting || !!editingEntryId}
-                            style={{
-                              marginRight: '10px',
-                              background: 'none',
-                              border: 'none',
-                              cursor: 'pointer',
-                              padding: '2px 5px',
-                              color: 'var(--primary-color)',
-                            }}
-                            title="Edit entry"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => handleDeleteEntry(entry.entryId)}
-                            disabled={isLoading || isSubmitting || !!editingEntryId}
-                            style={{
-                              marginLeft: '10px',
-                              color: 'red',
-                              background: 'none',
-                              border: 'none',
-                              cursor: 'pointer',
-                              padding: '2px 5px',
-                            }}
-                            title="Delete entry"
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </li>
-                    );
+                        {typeof entry.durationRight === 'number' && entry.durationRight > 0 && (
+                          <span style={{ marginRight: '10px' }}>
+                            Right: <strong>{entry.durationRight} min</strong>
+                          </span>
+                        )}
+                        {entry.lastSide && <span style={{ color: '#888' }}>(Last Side: {entry.lastSide})</span>}
+                      </div>
+                      Start: {isDateValid ? startDate.toLocaleString() : 'Invalid Date'}
+                      {entry.notes && (
+                        <>
+                          <br />
+                          Notes: {entry.notes}
+                        </>
+                      )}
+                      <div style={{ marginTop: '5px' }}>
+                        <button
+                          onClick={() => handleEditClick(entry)}
+                          disabled={isLoading || isSubmitting || !!editingEntryId}
+                          style={{
+                            marginRight: '10px',
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                            padding: '2px 5px',
+                            color: 'var(--primary-color)',
+                          }}
+                          title="Edit entry"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDeleteEntry(entry.entryId)}
+                          disabled={isLoading || isSubmitting || !!editingEntryId}
+                          style={{
+                            marginLeft: '10px',
+                            color: 'red',
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                            padding: '2px 5px',
+                          }}
+                          title="Delete entry"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </li>
+                  );
                 })}
               </ul>
             )}
           </section>
         </>
       ) : (
-         // Message when no profile is selected (after loading is complete)
-         <p style={{ color: 'orange' }}>Please select a baby profile first.</p>
+        
+        <p style={{ color: 'orange' }}>Please select a baby profile first.</p>
       )}
     </div>
   );

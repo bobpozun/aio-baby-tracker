@@ -2,25 +2,25 @@ import { useState, useEffect, useCallback } from 'react';
 import { useProfiles, BabyProfile } from '../context/ProfileContext';
 import { apiClient } from '../utils/apiClient';
 
-// Generic type for any tracker entry (adjust as needed if common fields differ significantly)
-// We might need a more sophisticated generic approach later if entry structures vary widely.
-// Define a base interface for common tracker entry properties
+
+
+
 interface BaseTrackerEntry {
   entryId: string;
-  time?: string; // Used by most trackers for sorting
-  date?: string; // Used by Growth tracker for sorting
-  // Add other potentially common fields if needed, e.g., babyId
+  time?: string; 
+  date?: string; 
+  
 }
 
 interface UseTrackerLogicProps {
   trackerType: string;
 }
 
-// Constrain the generic T to ensure it has at least the base properties
+
 interface UseTrackerLogicReturn<T extends BaseTrackerEntry> {
   entries: T[];
-  isLoading: boolean; // Combined loading state (context + local fetch)
-  error: string | null; // Combined error state
+  isLoading: boolean; 
+  error: string | null; 
   editingEntryId: string | null;
   setEditingEntryId: React.Dispatch<React.SetStateAction<string | null>>;
   selectedProfile: BabyProfile | undefined;
@@ -28,10 +28,10 @@ interface UseTrackerLogicReturn<T extends BaseTrackerEntry> {
   fetchEntries: () => Promise<void>;
   handleDeleteEntry: (entryId: string) => Promise<void>;
   hasFetchedEmptyData: boolean;
-  // Add generic add/update handlers later if needed
+  
 }
 
-export function useTrackerLogic<T extends BaseTrackerEntry>({ // Use BaseTrackerEntry constraint here
+export function useTrackerLogic<T extends BaseTrackerEntry>({ 
   trackerType,
 }: UseTrackerLogicProps): UseTrackerLogicReturn<T> {
   const {
@@ -42,8 +42,8 @@ export function useTrackerLogic<T extends BaseTrackerEntry>({ // Use BaseTracker
   } = useProfiles();
 
   const [entries, setEntries] = useState<T[]>([]);
-  const [isLoadingEntries, setIsLoadingEntries] = useState<boolean>(false); // Local loading for fetching entries
-  const [localError, setLocalError] = useState<string | null>(null); // Local error for component actions
+  const [isLoadingEntries, setIsLoadingEntries] = useState<boolean>(false); 
+  const [localError, setLocalError] = useState<string | null>(null); 
   const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
   const [hasFetchedEmptyData, setHasFetchedEmptyData] = useState<boolean>(false);
 
@@ -58,17 +58,55 @@ export function useTrackerLogic<T extends BaseTrackerEntry>({ // Use BaseTracker
       const fetchedEntries = await apiClient.get<T[]>(
         `/profiles/${selectedProfileId}/trackers/${trackerType}`
       );
-      // Filter entries by trackerType if present
+      
       const filteredEntries = (fetchedEntries || []).filter(
         entry => !('trackerType' in entry) || entry.trackerType === trackerType
       );
       console.log(`Fetched ${trackerType} Entries (filtered):`, filteredEntries);
 
-      // Basic sorting assuming a 'time' or 'date' field exists - might need adjustment
-      const sortedEntries = (filteredEntries || []).sort((a, b) => {
+      
+      function normalizeEntryDates(entry: any, trackerType: string) {
+        switch (trackerType) {
+          case 'sleep':
+            return {
+              ...entry,
+              startTime: entry.startTime || entry.startDateTime || entry.time || '',
+              endTime: entry.endTime || entry.endDateTime || '',
+            };
+          case 'nursing':
+            return {
+              ...entry,
+              startTime: entry.startTime || entry.startDateTime || entry.time || '',
+              endTime: entry.endTime || entry.endDateTime || '',
+              durationLeft: entry.durationLeft !== undefined ? Number(entry.durationLeft) : undefined,
+              durationRight: entry.durationRight !== undefined ? Number(entry.durationRight) : undefined,
+            };
+          case 'bottle':
+          case 'diaper':
+          case 'potty':
+          case 'solids':
+          case 'medicine':
+          case 'temperature':
+            return {
+              ...entry,
+              time: entry.time || entry.startDateTime || entry.date || entry.createdAt || '',
+            };
+          case 'growth':
+            return {
+              ...entry,
+              date: entry.date || entry.startDateTime || entry.time || '',
+            };
+          default:
+            return entry;
+        }
+      }
+
+      
+      const normalizedEntries = (filteredEntries || []).map(e => normalizeEntryDates(e, trackerType));
+      const sortedEntries = normalizedEntries.sort((a, b) => {
          const dateA = new Date(a.time || a.date || 0).getTime();
          const dateB = new Date(b.time || b.date || 0).getTime();
-         return dateB - dateA; // Descending
+         return dateB - dateA; 
       });
 
       setEntries(sortedEntries);
@@ -85,34 +123,34 @@ export function useTrackerLogic<T extends BaseTrackerEntry>({ // Use BaseTracker
     } finally {
       setIsLoadingEntries(false);
     }
-  }, [selectedProfileId, trackerType, isContextLoading]); // Only depend on truly relevant values
+  }, [selectedProfileId, trackerType, isContextLoading]); 
 
   const handleDeleteEntry = useCallback(async (entryId: string) => {
     if (!selectedProfileId) return;
 
-    const originalEntries = [...entries]; // Use spread for shallow copy
+    const originalEntries = [...entries]; 
     setEntries((prevEntries) =>
       prevEntries.filter((entry) => entry.entryId !== entryId)
     );
     setLocalError(null);
-    setIsLoadingEntries(true); // Indicate activity might affect the list
+    setIsLoadingEntries(true); 
 
     try {
       await apiClient.del(
         `/profiles/${selectedProfileId}/trackers/${trackerType}/${entryId}`
       );
       console.log(`Deleted ${trackerType} entry ${entryId}`);
-      // Optimistic update succeeded, no state change needed here
+      
     } catch (err: any) {
       console.error(`Failed to delete ${trackerType} entry ${entryId}:`, err);
       setLocalError(err.message || `Failed to delete ${trackerType} entry.`);
-      setEntries(originalEntries); // Rollback
+      setEntries(originalEntries); 
     } finally {
         setIsLoadingEntries(false);
     }
-  }, [selectedProfileId, trackerType, entries]); // Need entries for rollback
+  }, [selectedProfileId, trackerType, entries]); 
 
-  // Recalculate derived state based on context and local state
+  
   const isLoading = isContextLoading || isLoadingEntries;
   const error = localError || contextError;
   const selectedProfile = selectedProfileId ? getProfileById(selectedProfileId) : undefined;

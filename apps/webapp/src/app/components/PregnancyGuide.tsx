@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useProfiles } from '../context/ProfileContext'; // Import context hook
-import pregnancyData from '../data/pregnancyGuideData.json'; // Import data
+import { useProfiles } from '../context/ProfileContext'; 
+import pregnancyData from '../data/pregnancyGuideData.json'; 
 
-// Interface for the weekly info structure
+
 interface WeeklyInfo {
   week: number;
   babySizeText: string;
-  babyImagePlaceholder: string; // Image ref/URL
+  babyImagePlaceholder: string; 
   developmentDetails: string[];
 }
 
@@ -15,7 +15,7 @@ import { calculatePregnancyWeek, getProfileAgeOrDue } from '../utils/dateUtils';
 const PregnancyGuide: React.FC = () => {
   const { selectedProfileId, getProfileById } = useProfiles();
 
-  // Determine min/max weeks dynamically from data
+  
   const minWeek = useMemo(
     () =>
       pregnancyData.reduce(
@@ -33,16 +33,16 @@ const PregnancyGuide: React.FC = () => {
     []
   );
 
-  const [currentWeek, setCurrentWeek] = useState<number>(minWeek); // Default to earliest week in data
+  const [currentWeek, setCurrentWeek] = useState<number>(minWeek); 
   const [selectedWeekData, setSelectedWeekData] = useState<WeeklyInfo | null>(
     null
   );
 
-  // Effect to update currentWeek based on selected profile's due date
+  
   useEffect(() => {
     const profile = getProfileById(selectedProfileId);
     // TODO: Determine if profile is 'pregnancy' type if model changes
-    const dueDate = profile?.birthday; // Assuming 'birthday' holds due date for now
+    const dueDate = profile?.birthday; 
     const calculatedWeek = calculatePregnancyWeek(dueDate);
 
     if (
@@ -52,20 +52,20 @@ const PregnancyGuide: React.FC = () => {
     ) {
       setCurrentWeek(calculatedWeek);
     } else {
-      // If no profile, no due date, or calculated week is out of bounds, default to minWeek
+      
       setCurrentWeek(minWeek);
     }
-  }, [selectedProfileId, getProfileById, minWeek, maxWeek]); // Re-run when profile changes
+  }, [selectedProfileId, getProfileById, minWeek, maxWeek]); 
 
-  // Effect to load the data for the currentWeek
+  
   useEffect(() => {
     const data = pregnancyData.find((item) => item.week === currentWeek);
-    setSelectedWeekData(data || null); // Find data matching the current week
-  }, [currentWeek]); // Re-run when currentWeek changes
+    setSelectedWeekData(data || null); 
+  }, [currentWeek]); 
 
   const handleWeekChange = (change: number) => {
     const newWeek = currentWeek + change;
-    // Use dynamic min/max weeks for bounds check
+    
     if (newWeek >= minWeek && newWeek <= maxWeek) {
       setCurrentWeek(newWeek);
     }
@@ -113,7 +113,7 @@ const PregnancyGuide: React.FC = () => {
           </div>
         ) : (
           <div>
-            {/* Show appropriate message based on whether a week is being loaded or if data is missing */}
+            {}
             <p>
               Loading week {currentWeek} information or data not available...
             </p>

@@ -2,15 +2,15 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { apiClient } from '../../utils/apiClient';
 import { useTrackerLogic } from '../../hooks/useTrackerLogic';
 import { useTrackerForm } from '../../hooks/useTrackerForm';
-// Import date utils
+
 import {
-  getCurrentDateLocal, // Use date-only for this tracker
+  getCurrentDateLocal, 
 } from '../../utils/dateUtils';
 
-// Interface remains specific to this tracker
+
 interface GrowthEntry {
   entryId: string;
-  date: string; // YYYY-MM-DD
+  time: string; // ISO string
   weight?: number;
   weightUnit?: 'kg' | 'lb';
   height?: number;
@@ -21,26 +21,26 @@ interface GrowthEntry {
   babyId: string;
 }
 
-// Define the structure for the data part of a new entry
+
 type NewGrowthEntryData = Omit<GrowthEntry, 'entryId' | 'babyId'>;
 
 const GrowthTracker: React.FC = () => {
-  // Use the custom hook for shared logic
+  
   const {
     entries,
-    isLoading, // Combined loading state from hook
-    error: displayError, // Combined error state from hook
+    isLoading, 
+    error: displayError, 
     editingEntryId,
     setEditingEntryId,
-    selectedProfile, // Get the actual profile object
+    selectedProfile, 
     profileName,
-    fetchEntries, // Get fetch function from hook
-    handleDeleteEntry, // Get delete function from hook
+    fetchEntries, 
+    handleDeleteEntry, 
     hasFetchedEmptyData,
   } = useTrackerLogic<GrowthEntry>({ trackerType: 'growth' });
 
-  // Keep component-specific form state
-  const [date, setDate] = useState(getCurrentDateLocal());
+  
+  const [time, setTime] = useState(getCurrentDateLocal());
   const [weight, setWeight] = useState('');
   const [weightUnit, setWeightUnit] = useState<'kg' | 'lb'>('kg');
   const [height, setHeight] = useState('');
@@ -50,12 +50,12 @@ const GrowthTracker: React.FC = () => {
     'cm' | 'in'
   >('cm');
   const [notes, setNotes] = useState('');
-  // useTrackerForm handles isSubmitting and formError now
+  
 
-  // Function to reset form fields
+  
   const resetForm = useCallback(() => {
     console.log('GrowthTracker: resetForm called');
-    setDate(getCurrentDateLocal());
+    setTime(getCurrentDateLocal());
     setWeight('');
     setWeightUnit('kg');
     setHeight('');
@@ -63,11 +63,11 @@ const GrowthTracker: React.FC = () => {
     setHeadCircumference('');
     setHeadCircumferenceUnit('cm');
     setNotes('');
-    setEditingEntryId(null); // Use setter from hook
+    setEditingEntryId(null); 
     setFormError(null);
   }, [setEditingEntryId]);
 
-  // Effect to reset form when selected profile changes (after loading)
+  
    useEffect(() => {
     if (!isLoading && selectedProfile) {
         resetForm();
@@ -77,7 +77,7 @@ const GrowthTracker: React.FC = () => {
     }
   }, [entries, isLoading]);
 
-   // Effect to fetch entries when selected profile changes (after loading)
+   
    useEffect(() => {
     if (selectedProfile && !isLoading && entries.length === 0 && !hasFetchedEmptyData) {
       console.log(`GrowthTracker: Fetching entries for profile ${selectedProfile.id}`);
@@ -86,10 +86,10 @@ const GrowthTracker: React.FC = () => {
   }, [selectedProfile?.id, isLoading]);
 
 
-  // Function to set the form state for editing an entry
+  
   const handleEditClick = (entry: GrowthEntry) => {
-    setEditingEntryId(entry.entryId); // Use setter from hook
-    setDate(entry.date); // Assumes date is already in YYYY-MM-DD format
+    setEditingEntryId(entry.entryId); 
+    setTime(entry.time); 
     setWeight(entry.weight?.toString() || '');
     setWeightUnit(entry.weightUnit || 'kg');
     setHeight(entry.height?.toString() || '');
@@ -99,10 +99,10 @@ const GrowthTracker: React.FC = () => {
     setNotes(entry.notes || '');
   };
 
-  // useTrackerForm handles submit logic
+  
   const validate = () => {
     if (!selectedProfile) return 'No profile selected.';
-    if (!date) return 'Date is required.';
+    if (!time) return 'Time is required.';
     if (!weight && !height && !headCircumference) {
       return 'Please enter at least one measurement (Weight, Height, or Head Circumference).';
     }
@@ -112,9 +112,9 @@ const GrowthTracker: React.FC = () => {
     return null;
   };
   const buildEntryData = () => {
-    if (!date) return null;
+    if (!time) return null;
     return {
-      date,
+      time,
       weight: weight ? parseFloat(weight) : undefined,
       weightUnit: weight ? weightUnit : undefined,
       height: height ? parseFloat(height) : undefined,
@@ -141,12 +141,12 @@ const GrowthTracker: React.FC = () => {
     apiClient,
   });
 
-  // Use combined loading state from hook for initial loading display
+  
   if (isLoading && !selectedProfile) {
     return <div>Loading profile data...</div>;
   }
 
-  // Use combined error state from hook for context errors
+  
   if (displayError && !selectedProfile) {
      return <div style={{ color: 'red' }}>Error loading profiles: {displayError}</div>;
   }
@@ -157,12 +157,12 @@ const GrowthTracker: React.FC = () => {
         Growth Tracker {profileName ? `for ${profileName}` : '(Select Profile...)'}
       </h2>
 
-      {/* Display form-specific errors */}
+      {}
       {formError && <p style={{ color: 'red' }}>Error: {formError}</p>}
-      {/* Display context/fetch errors if not form-related */}
+      {}
       {displayError && !formError && <p style={{ color: 'red' }}>Error: {displayError}</p>}
 
-      {/* Render sections only if a profile is selected */}
+      {}
       {selectedProfile ? (
         <>
           <section>
@@ -173,12 +173,12 @@ const GrowthTracker: React.FC = () => {
             </h3>
             <form onSubmit={handleSubmit}>
               <div>
-                <label htmlFor="growthDate">Date:</label>
+                <label htmlFor="growthTime">Time:</label>
                 <input
-                  type="date"
-                  id="growthDate"
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
+                  type="datetime-local"
+                  id="growthTime"
+                  value={time}
+                  onChange={(e) => setTime(e.target.value)}
                   required
                 />
               </div>
@@ -274,90 +274,85 @@ const GrowthTracker: React.FC = () => {
             <h3>
               Growth Log {profileName ? `for ${profileName}` : ''}
             </h3>
-            {/* Use combined isLoading for log loading state */}
+            {}
             {isLoading && entries.length === 0 ? (
               <p>Loading log...</p>
             ) : entries.length === 0 && hasFetchedEmptyData ? (
               <p>No growth measurements recorded for this profile yet.</p>
-            ) : entries.length === 0 ? (
-              <p>Loading log...</p>
             ) : (
               <ul>
                 {entries.map((entry) => {
-                    // Check date validity before rendering
-                    // Add T00:00:00 to treat date string as local timezone for Date object
-                    const entryDate = new Date(entry.date + 'T00:00:00');
-                    const isDateValid = !isNaN(entryDate.getTime());
-
-                    return (
-                      <li key={entry.entryId}>
-                        <strong>Date:</strong> {isDateValid ? entryDate.toLocaleDateString() : 'Invalid Date'}
-                        {entry.weight && (
-                          <>
-                            {' '}
-                            <br /> Weight: {entry.weight} {entry.weightUnit}{' '}
-                          </>
-                        )}
-                        {entry.height && (
-                          <>
-                            {' '}
-                            <br /> Height: {entry.height} {entry.heightUnit}{' '}
-                          </>
-                        )}
-                        {entry.headCircumference && (
-                          <>
-                            {' '}
-                            <br /> Head: {entry.headCircumference}{' '}
-                            {entry.headCircumferenceUnit}{' '}
-                          </>
-                        )}
-                        {entry.notes && (
-                          <>
-                            <br />
-                            Notes: {entry.notes}
-                          </>
-                        )}
-                        <div style={{ marginTop: '5px' }}>
-                          <button
-                            onClick={() => handleEditClick(entry)}
-                            disabled={isLoading || isSubmitting || !!editingEntryId}
-                            style={{
-                              marginRight: '10px',
-                              background: 'none',
-                              border: 'none',
-                              cursor: 'pointer',
-                              padding: '2px 5px',
-                              color: 'var(--primary-color)',
-                            }}
-                            title="Edit entry"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => handleDeleteEntry(entry.entryId)}
-                            disabled={isLoading || isSubmitting || !!editingEntryId}
-                            style={{
-                              marginLeft: '10px',
-                              color: 'red',
-                              background: 'none',
-                              border: 'none',
-                              cursor: 'pointer',
-                              padding: '2px 5px',
-                            }}
-                            title="Delete entry"
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </li>
-                    );
+                  let entryTime: Date;
+                  if (entry.time.includes('T')) {
+                    entryTime = new Date(entry.time);
+                  } else {
+                    entryTime = new Date(entry.time + 'T00:00:00');
+                  }
+                  const isTimeValid = !isNaN(entryTime.getTime());
+                  return (
+                    <li key={entry.entryId}>
+                      <strong>Time:</strong> {isTimeValid ? entryTime.toLocaleString(undefined, { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : 'Invalid Time'}
+                      {entry.weight && (
+                        <>
+                          <br /> Weight: {entry.weight} {entry.weightUnit}
+                        </>
+                      )}
+                      {entry.height && (
+                        <>
+                          <br /> Height: {entry.height} {entry.heightUnit}
+                        </>
+                      )}
+                      {entry.headCircumference && (
+                        <>
+                          <br /> Head: {entry.headCircumference} {entry.headCircumferenceUnit}
+                        </>
+                      )}
+                      {entry.notes && (
+                        <>
+                          <br />Notes: {entry.notes}
+                        </>
+                      )}
+                      <div style={{ marginTop: '5px' }}>
+                        <button
+                          onClick={() => handleEditClick(entry)}
+                          disabled={isLoading || isSubmitting || !!editingEntryId}
+                          style={{
+                            marginRight: '10px',
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                            padding: '2px 5px',
+                            color: 'var(--primary-color)',
+                          }}
+                          title="Edit entry"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDeleteEntry(entry.entryId)}
+                          disabled={isLoading || isSubmitting || !!editingEntryId}
+                          style={{
+                            marginLeft: '10px',
+                            color: 'red',
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                            padding: '2px 5px',
+                          }}
+                          title="Delete entry"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </li>
+                  );
                 })}
               </ul>
             )}
           </section>
         </>
       ) : (
-         // Message when no profile is selected (after loading is complete)
+         
          <p style={{ color: 'orange' }}>Please select a baby profile first.</p>
       )}
     </div>

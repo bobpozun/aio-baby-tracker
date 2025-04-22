@@ -1,6 +1,6 @@
 import { apiGet, apiPost, apiPut, apiDelete, clearAuthToken } from './apiTestClient';
 
-// Define the expected shape of related objects
+
 interface BabyProfile {
   id: string;
   name: string;
@@ -14,7 +14,7 @@ interface SolidsEntry {
   amount?: string;
   reaction?: 'liked' | 'disliked' | 'neutral' | 'allergic';
   notes?: string;
-  imageKey?: string; // S3 key - Note: Testing image upload/delete via API test is complex
+  imageKey?: string; 
   babyId: string;
   trackerType: 'solids';
   createdAt: string;
@@ -25,7 +25,7 @@ describe('Solids Tracker API Endpoints', () => {
   let createdEntryId: string | null = null;
 
   beforeAll(async () => {
-    clearAuthToken(); // Ensure fresh login
+    clearAuthToken(); 
     const profileData = { name: `SolidsTest Baby ${Date.now()}`, birthday: '2025-02-04' };
     try {
       const response: BabyProfile = await apiPost('/profiles', profileData);
@@ -47,7 +47,7 @@ describe('Solids Tracker API Endpoints', () => {
         console.error(`Failed to clean up test profile ${testProfileId}:`, error);
       }
     }
-    // Note: S3 image cleanup is not handled here.
+    
   });
 
   test('POST /profiles/{profileId}/trackers/solids - should create a new solids entry', async () => {
@@ -59,7 +59,7 @@ describe('Solids Tracker API Endpoints', () => {
       amount: '2 tbsp',
       reaction: 'liked',
       notes: 'First time trying!',
-      // imageKey: 'test-image.jpg' // Cannot easily test image upload here
+      
     };
 
     const response: SolidsEntry = await apiPost(`/profiles/${testProfileId}/trackers/solids`, entryData);
@@ -74,7 +74,7 @@ describe('Solids Tracker API Endpoints', () => {
     expect(response.reaction).toBe(entryData.reaction);
     expect(response.notes).toBe(entryData.notes);
     expect(response.createdAt).toBeDefined();
-    // expect(response.imageKey).toBeUndefined(); // Expect no image key unless tested separately
+    
 
     createdEntryId = response.entryId;
   });
@@ -101,10 +101,10 @@ describe('Solids Tracker API Endpoints', () => {
   test('DELETE /profiles/{profileId}/trackers/solids/{entryId} - should delete the solids entry', async () => {
     if (!testProfileId || !createdEntryId) throw new Error('Test setup failed: testProfileId or createdEntryId is null.');
 
-    // Note: This test currently doesn't handle deleting associated S3 images
+    
     await apiDelete(`/profiles/${testProfileId}/trackers/solids/${createdEntryId}`);
 
-    // Verify by fetching again
+    
     const getResponse: SolidsEntry[] = await apiGet(`/profiles/${testProfileId}/trackers/solids`);
     const deletedEntry = getResponse.find(e => e.entryId === createdEntryId);
     expect(deletedEntry).toBeUndefined();

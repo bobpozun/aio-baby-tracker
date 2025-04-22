@@ -1,6 +1,6 @@
 require('dotenv').config({ path: '.env' });
 
-// Verify required environment variables are set
+
 const requiredEnvVars = [
   'USER_POOL_ID',
   'USER_POOL_CLIENT_ID',

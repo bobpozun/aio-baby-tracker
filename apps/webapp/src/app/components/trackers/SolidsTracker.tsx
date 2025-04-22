@@ -3,13 +3,10 @@ import { apiClient } from '../../utils/apiClient';
 import { uploadData, getUrl, remove } from 'aws-amplify/storage';
 import { useTrackerLogic } from '../../hooks/useTrackerLogic';
 import { useTrackerForm } from '../../hooks/useTrackerForm';
-// Import date utils
-import {
-  getCurrentDateTimeLocal,
-  formatDateTimeLocalInput,
-} from '../../utils/dateUtils';
 
-// Interface remains specific to this tracker
+import { getCurrentDateTimeLocal, formatDateTimeLocalInput } from '../../utils/dateUtils';
+
+
 interface SolidsEntry {
   entryId: string;
   time: string;
@@ -17,17 +14,17 @@ interface SolidsEntry {
   amount?: string;
   reaction?: 'liked' | 'disliked' | 'neutral' | 'allergic';
   notes?: string;
-  imageKey?: string; // S3 key
+  imageKey?: string; 
   babyId: string;
 }
 
-// Define the structure for the data part of a new entry
+
 type NewSolidsEntryData = Omit<SolidsEntry, 'entryId' | 'babyId'>;
 
 const SolidsTracker: React.FC = () => {
-  // ...existing state and hooks...
+  
 
-  // Validation function for solids entry
+  
   const validate = () => {
     if (!selectedProfile) return 'No profile selected.';
     if (!time || !food) return 'Time and food are required.';
@@ -35,11 +32,11 @@ const SolidsTracker: React.FC = () => {
     return null;
   };
 
-  // Build the entry data for submission, allowing override of imageKey (for uploaded images)
+  
   const buildEntryData = (imageKeyOverride?: string) => {
     if (!time || !food) return null;
     return {
-      time: new Date(time).toISOString(),
+      time, // already ISO string
       food,
       amount: amount ? amount : undefined,
       reaction: reaction || undefined,
@@ -48,35 +45,33 @@ const SolidsTracker: React.FC = () => {
     };
   };
 
-  // Use the custom hook for shared logic
+  
   const {
     entries,
-    isLoading, // Combined loading state from hook
-    error: displayError, // Combined error state from hook
+    isLoading, 
+    error: displayError, 
     editingEntryId,
     setEditingEntryId,
-    selectedProfile, // Get the actual profile object
+    selectedProfile, 
     profileName,
-    fetchEntries, // Get fetch function from hook
-    handleDeleteEntry: handleDeleteEntryFromHook, // Get delete function from hook (rename to avoid conflict)
+    fetchEntries, 
+    handleDeleteEntry: handleDeleteEntryFromHook, 
     hasFetchedEmptyData,
   } = useTrackerLogic<SolidsEntry>({ trackerType: 'solids' });
 
-  // Keep component-specific form state
+  
   const [time, setTime] = useState(getCurrentDateTimeLocal());
   const [food, setFood] = useState('');
   const [amount, setAmount] = useState('');
-  const [reaction, setReaction] = useState<
-    'liked' | 'disliked' | 'neutral' | 'allergic' | ''
-  >('');
+  const [reaction, setReaction] = useState<'liked' | 'disliked' | 'neutral' | 'allergic' | ''>('');
   const [notes, setNotes] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
   const [logImageUrls, setLogImageUrls] = useState<Record<string, string>>({});
-  // useTrackerForm handles isSubmitting and formError now
+  
 
-  // Function to reset form fields
+  
   const resetForm = useCallback(() => {
     console.log('SolidsTracker: resetForm called');
     setTime(getCurrentDateTimeLocal());
@@ -89,16 +84,16 @@ const SolidsTracker: React.FC = () => {
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
-    setEditingEntryId(null); // Use setter from hook
+    setEditingEntryId(null); 
     setFormError(null);
   }, [setEditingEntryId]);
 
-  // Fetch image URLs for the log when entries change
+  
   useEffect(() => {
     const fetchLogImageUrls = async () => {
       const urls: Record<string, string> = {};
       const promises = entries
-        .filter(entry => entry.imageKey && !logImageUrls[entry.entryId])
+        .filter((entry) => entry.imageKey && !logImageUrls[entry.entryId])
         .map(async (entry) => {
           try {
             const getUrlResult = await getUrl({ key: entry.imageKey! });
@@ -117,18 +112,18 @@ const SolidsTracker: React.FC = () => {
     }
   }, [entries, isLoading, logImageUrls]);
 
-  // Effect to reset form when selected profile changes (after loading)
-   useEffect(() => {
+  
+  useEffect(() => {
     if (!isLoading && selectedProfile) {
-        resetForm();
+      resetForm();
     }
-     if (!isLoading && !selectedProfile) {
-        resetForm();
+    if (!isLoading && !selectedProfile) {
+      resetForm();
     }
   }, [selectedProfile?.id, isLoading, resetForm]);
 
-   // Effect to fetch entries when selected profile changes (after loading)
-   useEffect(() => {
+  
+  useEffect(() => {
     if (selectedProfile && !isLoading && entries.length === 0 && !hasFetchedEmptyData) {
       fetchEntries();
     }
@@ -141,9 +136,9 @@ const SolidsTracker: React.FC = () => {
     setImagePreviewUrl(null);
   };
 
-  // Function to set the form state for editing an entry
+  
   const handleEditClick = async (entry: SolidsEntry) => {
-    setEditingEntryId(entry.entryId); // Use setter from hook
+    setEditingEntryId(entry.entryId); 
     setTime(formatDateTimeLocalInput(entry.time));
     setFood(entry.food);
     setAmount(entry.amount || '');
@@ -166,16 +161,16 @@ const SolidsTracker: React.FC = () => {
     }
   };
 
-  // Override delete handler to include S3 object deletion
+  
   const handleDeleteEntry = async (entryId: string) => {
     if (!selectedProfile) return;
     const entryToDelete = entries.find((e) => e.entryId === entryId);
     const imageKeyToDelete = entryToDelete?.imageKey;
 
-    // Call the hook's delete function first (handles optimistic UI and DB delete)
+    
     await handleDeleteEntryFromHook(entryId);
 
-    // If DB delete was likely successful (no immediate error rollback), delete S3 object
+    
     if (imageKeyToDelete) {
       try {
         await remove({ key: imageKeyToDelete });
@@ -187,7 +182,7 @@ const SolidsTracker: React.FC = () => {
     }
   };
 
-  // Component-specific submit logic including image upload
+  
   const [imageKey, setImageKey] = useState<string | undefined>(undefined);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -210,7 +205,7 @@ const SolidsTracker: React.FC = () => {
         return;
       }
     }
-    // Use the hook's handleFormSubmit, but with imageKey override
+    
     const customBuildEntryData = () => buildEntryData(newImageKey);
     try {
       await useTrackerForm<NewSolidsEntryData>({
@@ -231,36 +226,30 @@ const SolidsTracker: React.FC = () => {
     }
   };
 
-  // Use combined loading state from hook for initial loading display
+  
   if (isLoading && !selectedProfile) {
     return <div>Loading profile data...</div>;
   }
 
-  // Use combined error state from hook for context errors
+  
   if (displayError && !selectedProfile) {
-     return <div style={{ color: 'red' }}>Error loading profiles: {displayError}</div>;
+    return <div style={{ color: 'red' }}>Error loading profiles: {displayError}</div>;
   }
 
   return (
     <div>
-      <h2>
-        Solids Tracker {profileName ? `for ${profileName}` : '(Select Profile...)'}
-      </h2>
+      <h2>Solids Tracker {profileName ? `for ${profileName}` : '(Select Profile...)'}</h2>
 
-      {/* Display form-specific errors */}
+      {}
       {formError && <p style={{ color: 'red' }}>Error: {formError}</p>}
-      {/* Display context/fetch errors if not form-related */}
+      {}
       {displayError && !formError && <p style={{ color: 'red' }}>Error: {displayError}</p>}
 
-      {/* Render sections only if a profile is selected */}
+      {}
       {selectedProfile ? (
         <>
           <section>
-            <h3>
-              {editingEntryId
-                ? 'Edit Solid Food Entry'
-                : 'Add New Solid Food Entry'}
-            </h3>
+            <h3>{editingEntryId ? 'Edit Solid Food Entry' : 'Add New Solid Food Entry'}</h3>
             <form onSubmit={handleSubmit}>
               <div>
                 <label htmlFor="solidsTime">Time:</label>
@@ -274,29 +263,15 @@ const SolidsTracker: React.FC = () => {
               </div>
               <div>
                 <label htmlFor="foodItem">Food:</label>
-                <input
-                  type="text"
-                  id="foodItem"
-                  value={food}
-                  onChange={(e) => setFood(e.target.value)}
-                  required
-                />
+                <input type="text" id="foodItem" value={food} onChange={(e) => setFood(e.target.value)} required />
               </div>
               <div>
                 <label htmlFor="foodAmount">Amount (Optional):</label>
-                <input
-                  type="text"
-                  id="foodAmount"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                />
+                <input type="text" id="foodAmount" value={amount} onChange={(e) => setAmount(e.target.value)} />
               </div>
               <div>
                 <label htmlFor="foodReaction">Reaction (Optional):</label>
-                <select
-                  value={reaction}
-                  onChange={(e) => setReaction(e.target.value as any)}
-                >
+                <select value={reaction} onChange={(e) => setReaction(e.target.value as any)}>
                   <option value="">Select...</option>
                   <option value="liked">Liked</option>
                   <option value="disliked">Disliked</option>
@@ -312,31 +287,13 @@ const SolidsTracker: React.FC = () => {
                   accept="image/*"
                   ref={fileInputRef}
                   onChange={handleFileChange}
+                  style={{ display: 'block', marginTop: '5px' }}
                 />
-                {editingEntryId && imagePreviewUrl && !selectedFile && (
-                  <div style={{ marginTop: '5px' }}>
-                    <p>Current Image:</p>
-                    <img
-                      src={imagePreviewUrl}
-                      alt="Current food"
-                      style={{ maxWidth: '100px', maxHeight: '100px' }}
-                    />
-                    {/* Add a button to remove image? */}
-                  </div>
-                )}
-                {selectedFile && (
-                  <p style={{ marginTop: '5px' }}>
-                    New file selected: {selectedFile.name}
-                  </p>
-                )}
+                {selectedFile && <p style={{ marginTop: '5px' }}>New file selected: {selectedFile.name}</p>}
               </div>
               <div>
                 <label htmlFor="solidsNotes">Notes:</label>
-                <textarea
-                  id="solidsNotes"
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                />
+                <textarea id="solidsNotes" value={notes} onChange={(e) => setNotes(e.target.value)} />
               </div>
               <button type="submit" disabled={isSubmitting || !selectedProfile}>
                 {isSubmitting
@@ -348,12 +305,7 @@ const SolidsTracker: React.FC = () => {
                   : 'Add Solids Entry'}
               </button>
               {editingEntryId && (
-                <button
-                  type="button"
-                  onClick={resetForm}
-                  disabled={isSubmitting}
-                  style={{ marginLeft: '10px' }}
-                >
+                <button type="button" onClick={resetForm} disabled={isSubmitting} style={{ marginLeft: '10px' }}>
                   Cancel Edit
                 </button>
               )}
@@ -363,10 +315,8 @@ const SolidsTracker: React.FC = () => {
           <hr />
 
           <section>
-            <h3>
-              Solids Log {profileName ? `for ${profileName}` : ''}
-            </h3>
-             {/* Use combined isLoading for log loading state */}
+            <h3>Solids Log {profileName ? `for ${profileName}` : ''}</h3>
+            {}
             {isLoading && entries.length === 0 ? (
               <p>Loading log...</p>
             ) : entries.length === 0 && hasFetchedEmptyData ? (
@@ -376,82 +326,90 @@ const SolidsTracker: React.FC = () => {
             ) : (
               <ul>
                 {entries.map((entry) => {
-                    const entryDate = new Date(entry.time);
-                    const isDateValid = !isNaN(entryDate.getTime());
-                    // Safely format reaction
-                    const formattedReaction = entry.reaction ? ` - Reaction: ${entry.reaction}` : '';
-                    return (
-                      <li key={entry.entryId}>
-                        <strong>{entry.food}</strong>{' '}
-                        {entry.amount ? `(${entry.amount})` : ''}
-                        {formattedReaction}
-                        <br />
-                        Time: {isDateValid ? entryDate.toLocaleString() : 'Invalid Date'}
-                        {entry.imageKey && (
-                          <div style={{ marginTop: '5px' }}>
-                            {logImageUrls[entry.entryId] ? (
-                              <img
-                                src={logImageUrls[entry.entryId]}
-                                alt={`Food entry ${entry.food}`}
-                                style={{
-                                  maxWidth: '100px',
-                                  maxHeight: '100px',
-                                  display: 'block',
-                                }}
-                              />
-                            ) : (
-                              <span>[Loading image...]</span>
-                            )}
-                          </div>
-                        )}
-                        {entry.notes && (
-                          <>
-                            <br />
-                            Notes: {entry.notes}
-                          </>
-                        )}
+                  const entryDate = new Date(entry.time);
+                  const isDateValid = !isNaN(entryDate.getTime());
+                  
+                  const formattedReaction = entry.reaction ? ` - Reaction: ${entry.reaction}` : '';
+                  return (
+                    <li key={entry.entryId}>
+                      <strong>{entry.food}</strong> {entry.amount ? `(${entry.amount})` : ''}
+                      {formattedReaction}
+                      <br />
+                      Time:{' '}
+                      {isDateValid
+                        ? entryDate.toLocaleString(undefined, {
+                            year: 'numeric',
+                            month: '2-digit',
+                            day: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })
+                        : 'Invalid Date'}
+                      {entry.imageKey && (
                         <div style={{ marginTop: '5px' }}>
-                          <button
-                            onClick={() => handleEditClick(entry)}
-                            disabled={isLoading || isSubmitting || !!editingEntryId}
-                            style={{
-                              marginRight: '10px',
-                              background: 'none',
-                              border: 'none',
-                              cursor: 'pointer',
-                              padding: '2px 5px',
-                              color: 'var(--primary-color)',
-                            }}
-                            title="Edit entry"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => handleDeleteEntry(entry.entryId)}
-                            disabled={isLoading || isSubmitting || !!editingEntryId}
-                            style={{
-                              marginLeft: '10px',
-                              color: 'red',
-                              background: 'none',
-                              border: 'none',
-                              cursor: 'pointer',
-                              padding: '2px 5px',
-                            }}
-                            title="Delete entry"
-                          >
-                            Delete
-                          </button>
+                          {logImageUrls[entry.entryId] ? (
+                            <img
+                              src={logImageUrls[entry.entryId]}
+                              alt={`Food entry ${entry.food}`}
+                              style={{
+                                maxWidth: '100px',
+                                maxHeight: '100px',
+                                display: 'block',
+                              }}
+                            />
+                          ) : (
+                            <span>[Loading image...]</span>
+                          )}
                         </div>
-                      </li>
-                    );
+                      )}
+                      {entry.notes && (
+                        <>
+                          <br />
+                          Notes: {entry.notes}
+                        </>
+                      )}
+                      <div style={{ marginTop: '5px' }}>
+                        <button
+                          onClick={() => handleEditClick(entry)}
+                          disabled={isLoading || isSubmitting || !!editingEntryId}
+                          style={{
+                            marginRight: '10px',
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                            padding: '2px 5px',
+                            color: 'var(--primary-color)',
+                          }}
+                          title="Edit entry"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDeleteEntry(entry.entryId)}
+                          disabled={isLoading || isSubmitting || !!editingEntryId}
+                          style={{
+                            marginLeft: '10px',
+                            color: 'red',
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                            padding: '2px 5px',
+                          }}
+                          title="Delete entry"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </li>
+                  );
                 })}
               </ul>
             )}
           </section>
         </>
       ) : (
-         // Message when no profile is selected (after loading is complete)
-         <p style={{ color: 'orange' }}>Please select a baby profile first.</p>
+        
+        <p style={{ color: 'orange' }}>Please select a baby profile first.</p>
       )}
     </div>
   );
