@@ -8,7 +8,7 @@ import { getCurrentDateTimeLocal, formatDateTimeLocalInput } from '../../utils/d
 
 interface TemperatureEntry {
   entryId: string;
-  time: string;
+  createdAt?: string; 
   temperature: number;
   unit: 'C' | 'F';
   notes?: string;
@@ -34,18 +34,22 @@ const TemperatureTracker: React.FC = () => {
   } = useTrackerLogic<TemperatureEntry>({ trackerType: 'temperature' });
 
   
-  const [time, setTime] = useState(getCurrentDateTimeLocal());
+  const [createdAt, setCreatedAt] = useState(() => {
+  const now = new Date();
+  now.setSeconds(0, 0);
+  return now.toISOString().slice(0, 16);
+});
   const [temperature, setTemperature] = useState('');
-  const [unit, setUnit] = useState<'C' | 'F'>('C');
+  const [unit, setUnit] = useState<'C' | 'F'>('F');
   const [notes, setNotes] = useState('');
   
 
   
   const resetForm = useCallback(() => {
     console.log('TemperatureTracker: resetForm called');
-    setTime(getCurrentDateTimeLocal());
+    setCreatedAt(getCurrentDateTimeLocal());
     setTemperature('');
-    setUnit('C');
+    setUnit('F');
     setNotes('');
     setEditingEntryId(null); 
     setFormError(null);
@@ -71,7 +75,7 @@ const TemperatureTracker: React.FC = () => {
   
   const handleEditClick = (entry: TemperatureEntry) => {
     setEditingEntryId(entry.entryId); 
-    setTime(formatDateTimeLocalInput(entry.time));
+    setCreatedAt(formatDateTimeLocalInput(entry.createdAt));
     setTemperature(entry.temperature.toString());
     setUnit(entry.unit);
     setNotes(entry.notes || '');
@@ -81,14 +85,14 @@ const TemperatureTracker: React.FC = () => {
   
   const validate = () => {
     if (!selectedProfile) return 'No profile selected.';
-    if (!time || !temperature) return 'Time and temperature are required.';
+    if (!createdAt || !temperature) return 'Time and temperature are required.';
     if (isNaN(Number(temperature))) return 'Temperature must be a number.';
     return null;
   };
   const buildEntryData = () => {
-    if (!time || !temperature) return null;
+    if (!createdAt || !temperature) return null;
     return {
-      time, // Use ISO string directly
+      createdAt, // Use ISO string directly
       temperature: parseFloat(temperature),
       unit,
       notes: notes || undefined,
@@ -132,12 +136,12 @@ const TemperatureTracker: React.FC = () => {
             <h3>{editingEntryId ? 'Edit Temperature Reading' : 'Add New Temperature Reading'}</h3>
             <form onSubmit={handleSubmit}>
               <div>
-                <label htmlFor="tempTime">Time:</label>
+                <label htmlFor="temperatureDate">Date:</label>
                 <input
                   type="datetime-local"
-                  id="tempTime"
-                  value={time}
-                  onChange={(e) => setTime(e.target.value)}
+                  id="temperatureDate"
+                  value={createdAt}
+                  onChange={(e) => setCreatedAt(e.target.value)}
                   required
                 />
               </div>
@@ -191,18 +195,19 @@ const TemperatureTracker: React.FC = () => {
             ) : (
               <ul>
                 {entries.map((entry) => {
-                  const entryDate = new Date(entry.time);
-                  const isDateValid = !isNaN(entryDate.getTime());
+                  let entryDate: Date | null = null;
+                  let isDateValid = false;
+                  if (entry.createdAt) {
+                    entryDate = new Date(entry.createdAt ?? '');
+                    isDateValid = !isNaN(entryDate.getTime());
+                  }
                   return (
                     <li key={entry.entryId}>
                       <strong>
                         {entry.temperature}°{entry.unit}
                       </strong>
                       <br />
-                      Time:{' '}
-                      {isDateValid
-                        ? entryDate.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
-                        : 'Invalid Date'}
+                      Time: {isDateValid && entryDate ? entryDate.toLocaleString(undefined, { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : 'Invalid Time'}
                       {entry.notes && (
                         <>
                           <br />

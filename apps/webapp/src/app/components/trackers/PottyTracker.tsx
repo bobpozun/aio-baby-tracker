@@ -8,9 +8,9 @@ import { getCurrentDateTimeLocal, formatDateTimeLocalInput } from '../../utils/d
 
 interface PottyEntry {
   entryId: string;
-  time: string;
+  createdAt?: string;
   type: 'pee' | 'poop' | 'both';
-  location: 'potty' | 'diaper' | 'other';
+
   notes?: string;
   babyId: string;
 }
@@ -34,18 +34,22 @@ const PottyTracker: React.FC = () => {
   } = useTrackerLogic<PottyEntry>({ trackerType: 'potty' });
 
   
-  const [time, setTime] = useState(getCurrentDateTimeLocal());
+  const [createdAt, setCreatedAt] = useState(() => {
+  const now = new Date();
+  now.setSeconds(0, 0);
+  return now.toISOString().slice(0, 16);
+});
   const [type, setType] = useState<'pee' | 'poop' | 'both'>('pee');
-  const [location, setLocation] = useState<'potty' | 'diaper' | 'other'>('potty');
+  
   const [notes, setNotes] = useState('');
   
 
   
   const resetForm = useCallback(() => {
     console.log('PottyTracker: resetForm called');
-    setTime(getCurrentDateTimeLocal());
+    setCreatedAt(getCurrentDateTimeLocal());
     setType('pee');
-    setLocation('potty');
+
     setNotes('');
     setEditingEntryId(null); 
     setFormError(null);
@@ -71,9 +75,9 @@ const PottyTracker: React.FC = () => {
   
   const handleEditClick = (entry: PottyEntry) => {
     setEditingEntryId(entry.entryId); 
-    setTime(formatDateTimeLocalInput(entry.time));
+    setCreatedAt(formatDateTimeLocalInput(entry.createdAt));
     setType(entry.type);
-    setLocation(entry.location);
+
     setNotes(entry.notes || '');
     setFormError(null);
   };
@@ -81,15 +85,15 @@ const PottyTracker: React.FC = () => {
   
   const validate = () => {
     if (!selectedProfile) return 'No profile selected.';
-    if (!time) return 'Time is required.';
+    if (!createdAt) return 'Time is required.';
     return null;
   };
   const buildEntryData = () => {
-    if (!time) return null;
+    if (!createdAt) return null;
     return {
-      time, // Use ISO string directly
+      createdAt, // Use ISO string directly
       type,
-      location,
+
       notes: notes || undefined,
     };
   };
@@ -131,12 +135,12 @@ const PottyTracker: React.FC = () => {
             <h3>{editingEntryId ? 'Edit Potty Event' : 'Add New Potty Event'}</h3>
             <form onSubmit={handleSubmit}>
               <div>
-                <label htmlFor="pottyTime">Time:</label>
+                <label htmlFor="pottyDate">Date:</label>
                 <input
                   type="datetime-local"
                   id="pottyTime"
-                  value={time}
-                  onChange={(e) => setTime(e.target.value)}
+                  value={createdAt}
+                  onChange={(e) => setCreatedAt(e.target.value)}
                   required
                 />
               </div>
@@ -177,42 +181,6 @@ const PottyTracker: React.FC = () => {
                 </div>
               </div>
               <div>
-                <label>Location:</label>
-                <div>
-                  <input
-                    type="radio"
-                    id="potty"
-                    name="pottyLocation"
-                    value="potty"
-                    checked={location === 'potty'}
-                    onChange={() => setLocation('potty')}
-                  />
-                  <label htmlFor="potty">Potty</label>
-                </div>
-                <div>
-                  <input
-                    type="radio"
-                    id="diaper"
-                    name="pottyLocation"
-                    value="diaper"
-                    checked={location === 'diaper'}
-                    onChange={() => setLocation('diaper')}
-                  />
-                  <label htmlFor="diaper">Diaper</label>
-                </div>
-                <div>
-                  <input
-                    type="radio"
-                    id="other"
-                    name="pottyLocation"
-                    value="other"
-                    checked={location === 'other'}
-                    onChange={() => setLocation('other')}
-                  />
-                  <label htmlFor="other">Other</label>
-                </div>
-              </div>
-              <div>
                 <label htmlFor="pottyNotes">Notes:</label>
                 <textarea id="pottyNotes" value={notes} onChange={(e) => setNotes(e.target.value)} />
               </div>
@@ -247,61 +215,63 @@ const PottyTracker: React.FC = () => {
             ) : (
               <ul>
                 {entries.map((entry) => {
-                  const entryDate = new Date(entry.time);
-                  const isDateValid = !isNaN(entryDate.getTime());
-                  
+                  let entryDate: Date | null = null;
+                  let isDateValid = false;
+                  if (entry.createdAt) {
+                    entryDate = new Date(entry.createdAt);
+                    isDateValid = !isNaN(entryDate.getTime());
+                  }
                   const formattedType =
-                    typeof entry.type === 'string' ? entry.type.charAt(0).toUpperCase() + entry.type.slice(1) : 'N/A';
+                    entry.type === 'pee'
+                      ? 'Pee'
+                      : entry.type === 'poop'
+                      ? 'Poop'
+                      : 'Both';
                   return (
                     <li key={entry.entryId}>
-                      <strong>
-                        {formattedType} {}
-                      </strong>{' '}
-                      in {entry.location}
-                      <br />
-                      Time:{' '}
-                      {isDateValid
-                        ? entryDate.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
-                        : 'Invalid Date'}
-                      {entry.notes && (
-                        <>
-                          <br />
-                          Notes: {entry.notes}
-                        </>
-                      )}
-                      <div style={{ marginTop: '5px' }}>
-                        <button
-                          onClick={() => handleEditClick(entry)}
-                          disabled={isLoading || isSubmitting || !!editingEntryId}
-                          style={{
-                            marginRight: '10px',
-                            background: 'none',
-                            border: 'none',
-                            cursor: 'pointer',
-                            padding: '2px 5px',
-                            color: 'var(--primary-color)',
-                          }}
-                          title="Edit entry"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleDeleteEntry(entry.entryId)}
-                          disabled={isLoading || isSubmitting || !!editingEntryId}
-                          style={{
-                            marginLeft: '10px',
-                            color: 'red',
-                            background: 'none',
-                            border: 'none',
-                            cursor: 'pointer',
-                            padding: '2px 5px',
-                          }}
-                          title="Delete entry"
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </li>
+  <strong>Type:</strong> {formattedType}
+  <br />
+
+  <strong>Time:</strong> {isDateValid && entryDate ? entryDate.toLocaleString(undefined, { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : 'Invalid Time'}
+  {entry.notes && (
+    <>
+      <br />
+      <strong>Notes:</strong> {entry.notes}
+    </>
+  )}
+  <div style={{ marginTop: '5px' }}>
+    <button
+      onClick={() => handleEditClick(entry)}
+      disabled={isLoading || isSubmitting || !!editingEntryId}
+      style={{
+        marginRight: '10px',
+        background: 'none',
+        border: 'none',
+        cursor: 'pointer',
+        padding: '2px 5px',
+        color: 'var(--primary-color)',
+      }}
+      title="Edit entry"
+    >
+      Edit
+    </button>
+    <button
+      onClick={() => handleDeleteEntry(entry.entryId)}
+      disabled={isLoading || isSubmitting || !!editingEntryId}
+      style={{
+        marginLeft: '10px',
+        color: 'red',
+        background: 'none',
+        border: 'none',
+        cursor: 'pointer',
+        padding: '2px 5px',
+      }}
+      title="Delete entry"
+    >
+      Delete
+    </button>
+  </div>
+</li>
                   );
                 })}
               </ul>

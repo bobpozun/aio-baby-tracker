@@ -13,8 +13,10 @@ import {
 
 interface SleepEntry {
   entryId: string;
-  time: string;
+  createdAt?: string;
+  startDateTime?: string;
   endTime: string;
+  endDateTime?: string;
   notes?: string;
   babyId: string;
 }
@@ -38,16 +40,20 @@ const SleepTracker: React.FC = () => {
   } = useTrackerLogic<SleepEntry>({ trackerType: 'sleep' });
 
   
-  const [time, setStartTime] = useState(getCurrentDateTimeLocal());
-  const [endTime, setEndTime] = useState('');
+  const [startDateTime, setStartDateTime] = useState(() => {
+  const now = new Date();
+  now.setSeconds(0, 0);
+  return now.toISOString().slice(0, 16);
+});
+const [endDateTime, setEndDateTime] = useState('');
   const [notes, setNotes] = useState('');
   
 
   
   const resetForm = useCallback(() => {
     console.log('SleepTracker: resetForm called');
-    setStartTime(getCurrentDateTimeLocal());
-    setEndTime('');
+    setStartDateTime(getCurrentDateTimeLocal());
+    setEndDateTime('');
     setNotes('');
     setEditingEntryId(null); 
     setFormError(null); 
@@ -81,8 +87,8 @@ const SleepTracker: React.FC = () => {
   
   const handleEditClick = (entry: SleepEntry) => {
     setEditingEntryId(entry.entryId); 
-    setStartTime(formatDateTimeLocalInput(entry.time));
-    setEndTime(formatDateTimeLocalInput(entry.endTime));
+    setStartDateTime(formatDateTimeLocalInput(entry.startDateTime || entry.createdAt));
+    setEndDateTime(formatDateTimeLocalInput(entry.endDateTime || entry.endTime));
     setNotes(entry.notes || '');
     setFormError(null); 
   };
@@ -90,15 +96,18 @@ const SleepTracker: React.FC = () => {
   
   const validate = () => {
     if (!selectedProfile) return 'No profile selected.';
-    if (!time || !endTime) return 'Both start and end time are required.';
-    if (new Date(endTime) <= new Date(time)) return 'End time must be after start time.';
+    if (!startDateTime || !endDateTime) return 'Both start and end date/time are required.';
+    if (new Date(endDateTime) <= new Date(startDateTime)) return 'End time must be after start time.';
     return null;
   };
   const buildEntryData = () => {
-    if (!time || !endTime) return null;
+    if (!startDateTime || !endDateTime) return null;
+    const startISO = new Date(startDateTime).toISOString();
+    const endISO = new Date(endDateTime).toISOString();
     return {
-      time: new Date(time).toISOString(),
-      endTime: new Date(endTime).toISOString(),
+      startDateTime: startISO,
+      endDateTime: endISO,
+      endTime: endISO, // for compatibility with required field
       notes: notes || undefined,
     };
   };
@@ -142,22 +151,22 @@ const SleepTracker: React.FC = () => {
             <h3>{editingEntryId ? 'Edit Sleep Entry' : 'Add New Sleep Entry'}</h3>
             <form onSubmit={handleSubmit}>
               <div>
-                <label htmlFor="time">Start Time:</label>
+                <label htmlFor="startDateTime">Date:</label>
                 <input
                   type="datetime-local"
-                  id="time"
-                  value={time}
-                  onChange={(e) => setStartTime(e.target.value)}
+                  id="startDateTime"
+                  value={startDateTime}
+                  onChange={(e) => setStartDateTime(e.target.value)}
                   required
                 />
               </div>
               <div>
-                <label htmlFor="endTime">End Time:</label>
+                <label htmlFor="endDateTime">Date:</label>
                 <input
                   type="datetime-local"
-                  id="endTime"
-                  value={endTime}
-                  onChange={(e) => setEndTime(e.target.value)}
+                  id="endDateTime"
+                  value={endDateTime}
+                  onChange={(e) => setEndDateTime(e.target.value)}
                   required
                 />
               </div>
@@ -202,54 +211,61 @@ const SleepTracker: React.FC = () => {
             ) : (
               <ul>
                 {entries.map((entry) => {
-                  return (
-                    <li key={entry.entryId}>
-                      <strong>Duration:</strong> {calculateDuration(entry.time, entry.endTime)}
-                      <br />
-                      Start: {formatDateTimeDisplay(entry.time)}
-                      <br />
-                      End: {formatDateTimeDisplay(entry.endTime)}
-                      {entry.notes && (
-                        <>
-                          <br />
-                          Notes: {entry.notes}
-                        </>
-                      )}
-                      <div style={{ marginTop: '5px' }}>
-                        <button
-                          onClick={() => handleEditClick(entry)}
-                          disabled={isLoading || isSubmitting || !!editingEntryId} 
-                          style={{
-                            marginRight: '10px',
-                            background: 'none',
-                            border: 'none',
-                            cursor: 'pointer',
-                            padding: '2px 5px',
-                            color: 'var(--primary-color)',
-                          }}
-                          title="Edit entry"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleDeleteEntry(entry.entryId)}
-                          disabled={isLoading || isSubmitting || !!editingEntryId} 
-                          style={{
-                            marginLeft: '10px',
-                            color: 'red',
-                            background: 'none',
-                            border: 'none',
-                            cursor: 'pointer',
-                            padding: '2px 5px',
-                          }}
-                          title="Delete entry"
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </li>
-                  );
-                })}
+  // Use startDateTime/endDateTime if present, otherwise fallback to createdAt/endTime
+  const start = entry.startDateTime || entry.createdAt;
+  const end = entry.endDateTime || entry.endTime;
+  const startDate = start ? new Date(start) : null;
+  const endDate = end ? new Date(end) : null;
+  const formattedStart = startDate && !isNaN(startDate.getTime()) ? startDate.toLocaleString(undefined, { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : 'Invalid Date';
+  const formattedEnd = endDate && !isNaN(endDate.getTime()) ? endDate.toLocaleString(undefined, { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : 'Invalid Date';
+  return (
+    <li key={entry.entryId}>
+      <strong>Duration:</strong> {calculateDuration(start, end)}
+      <br />
+      Start: {formattedStart}
+      <br />
+      End: {formattedEnd}
+      {entry.notes && (
+        <>
+          <br />
+          Notes: {entry.notes}
+        </>
+      )}
+      <div style={{ marginTop: '5px' }}>
+        <button
+          onClick={() => handleEditClick(entry)}
+          disabled={isLoading || isSubmitting || !!editingEntryId}
+          style={{
+            marginRight: '10px',
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            padding: '2px 5px',
+            color: 'var(--primary-color)',
+          }}
+          title="Edit entry"
+        >
+          Edit
+        </button>
+        <button
+          onClick={() => handleDeleteEntry(entry.entryId)}
+          disabled={isLoading || isSubmitting || !!editingEntryId}
+          style={{
+            marginLeft: '10px',
+            color: 'red',
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            padding: '2px 5px',
+          }}
+          title="Delete entry"
+        >
+          Delete
+        </button>
+      </div>
+    </li>
+  );
+})}
               </ul>
             )}
           </section>

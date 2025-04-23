@@ -13,20 +13,25 @@ if (!API_URL || !EMAIL || !PASSWORD || !USER_POOL_ID || !USER_POOL_CLIENT_ID || 
 }
 
 
-const childrenProfiles = [
+// Define babies with birthdays, then sort and assign names so 'Baby One' is oldest, 'Baby Three' is unborn
+const rawProfiles = [
   {
-    name: 'Baby One', 
     birthday: new Date(Date.now() - 300 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
   },
   {
-    name: 'Baby Two', 
     birthday: new Date(Date.now() + 8 * 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
   },
   {
-    name: 'Baby Three', 
     birthday: new Date(Date.now() - 3 * 365 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
   },
 ];
+
+const sortedProfiles = rawProfiles.slice().sort((a, b) => new Date(a.birthday).getTime() - new Date(b.birthday).getTime());
+const names = ['Baby One', 'Baby Two', 'Baby Three'];
+const childrenProfiles = sortedProfiles.map((profile, idx) => ({
+  name: names[idx],
+  birthday: profile.birthday,
+}));
 
 
 async function authenticate(): Promise<string> {
@@ -117,8 +122,8 @@ async function createTrackerEntries(token: string, profileId: string, startDate:
       {
         startDateTime: nightStart.toISOString(),
         endDateTime: nightEnd.toISOString(),
-        duration: nightDurationMins,
         notes: 'Night sleep',
+        createdAt: new Date().toISOString(),
       },
       'Sleep', `Night ${formatNoSeconds(nightStart)} - ${formatNoSeconds(nightEnd)} | Duration: ${nightDurationMins}m`
     );
@@ -135,8 +140,8 @@ async function createTrackerEntries(token: string, profileId: string, startDate:
         {
           startDateTime: napStart.toISOString(),
           endDateTime: napEnd.toISOString(),
-          duration: napDurationMins,
           notes: `Nap ${i + 1}`,
+          createdAt: new Date().toISOString(),
         },
         'Sleep', `Nap ${i + 1} ${formatNoSeconds(napStart)} - ${formatNoSeconds(napEnd)} | Duration: ${napDurationMins}m`
       );
@@ -170,6 +175,8 @@ async function createTrackerEntries(token: string, profileId: string, startDate:
         lastSide,
         startDateTime: isoDay,
         notes: 'Demo nursing entry',
+        createdAt: new Date().toISOString(),
+        trackerType: 'nursing',
       },
       'Nursing', `${formatNoSeconds(d)} | Side: ${nursingSide}, Duration: ${nursingDuration}m`
     );
@@ -181,17 +188,19 @@ async function createTrackerEntries(token: string, profileId: string, startDate:
       const unit = bottleUnits[Math.floor(Math.random() * bottleUnits.length)];
       const type = bottleTypes[Math.floor(Math.random() * bottleTypes.length)];
       
-      let volume = unit === 'ml' ? randomBetween(60, 180) : randomBetween(2, 6);
+      // Use 'amount' instead of 'volume', and ensure realistic nonzero values
+      let amount = unit === 'ml' ? randomBetween(60, 180) : randomBetween(2, 6);
       await postEntry(
         `${API_URL}/profiles/${profileId}/trackers/bottle`,
         {
-          time: isoDay,
-          volume,
+          amount,
           unit,
           type,
           notes: 'Demo bottle entry',
+          createdAt: new Date().toISOString(),
+          trackerType: 'bottle',
         },
-        'Bottle', `${formatNoSeconds(d)} | Volume: ${volume}${unit}, Type: ${type}`
+        'Bottle', `${formatNoSeconds(d)} | Amount: ${amount}${unit}, Type: ${type}`
       );
     
     const diaperWet = Math.random() < 0.7;
@@ -203,6 +212,8 @@ async function createTrackerEntries(token: string, profileId: string, startDate:
         wet: diaperWet,
         dirty: diaperDirty,
         notes: 'Demo diaper entry',
+        createdAt: new Date().toISOString(),
+        trackerType: 'diaper',
       },
       'Diaper', `${formatNoSeconds(d)} | Wet: ${diaperWet}, Dirty: ${diaperDirty}`
     );
@@ -215,8 +226,10 @@ async function createTrackerEntries(token: string, profileId: string, startDate:
           startDateTime: isoDay,
           amount: solidsAmount,
           notes: 'Demo solids entry',
+          createdAt: new Date().toISOString(),
+          trackerType: 'solids',
         },
-        'Solids', `${formatNoSeconds(d)} | Amount: ${solidsAmount}g`
+        'Solids', `${formatNoSeconds(d)} | Amount: ${solidsAmount}`
       );
     }
     
@@ -229,6 +242,8 @@ async function createTrackerEntries(token: string, profileId: string, startDate:
           medicineName: 'DemoMed',
           dose: medDose,
           notes: 'Demo medicine entry',
+          createdAt: new Date().toISOString(),
+          trackerType: 'medicine',
         },
         'Medicine', `${formatNoSeconds(d)} | Dose: ${medDose}`
       );
@@ -244,6 +259,8 @@ async function createTrackerEntries(token: string, profileId: string, startDate:
           weight: growthWeight,
           height: growthHeight,
           notes: 'Demo growth entry',
+          createdAt: new Date().toISOString(),
+          trackerType: 'growth',
         },
         'Growth', `${formatNoSeconds(d)} | Weight: ${growthWeight}kg, Height: ${growthHeight}cm`
       );
@@ -259,21 +276,27 @@ async function createTrackerEntries(token: string, profileId: string, startDate:
           pee: pottyPee,
           poop: pottyPoop,
           notes: 'Demo potty entry',
+          createdAt: new Date().toISOString(),
+          trackerType: 'potty',
         },
         'Potty', `${formatNoSeconds(d)} | Pee: ${pottyPee}, Poop: ${pottyPoop}`
       );
     }
     
     if (Math.random() < 0.2) {
-      const temp = randomBetween(36, 39);
+      // Generate realistic Fahrenheit temperature (97.5–100.5°F)
+      const temp = (Math.random() * (100.5 - 97.5) + 97.5).toFixed(1);
       await postEntry(
         `${API_URL}/profiles/${profileId}/trackers/temperature`,
         {
           startDateTime: isoDay,
-          temperature: temp,
+          temperature: Number(temp),
+          unit: 'F',
           notes: 'Demo temperature entry',
+          createdAt: new Date().toISOString(),
+          trackerType: 'temperature',
         },
-        'Temp', `${formatNoSeconds(d)} | Temp: ${temp}°C`
+        'Temp', `${formatNoSeconds(d)} | Temp: ${temp}°F`
       );
     }
   }
@@ -341,15 +364,14 @@ async function main() {
         continue;
       }
       
-      let startDate: Date, endDate: Date;
       const birthdayDate = new Date(child.birthday);
+      // Only generate tracker entries for babies already born
       if (birthdayDate > new Date()) {
-        startDate = new Date();
-        endDate = birthdayDate;
-      } else {
-        endDate = new Date();
-        startDate = addDays(endDate, -60);
+        console.log(`Skipping tracker entries for unborn baby: ${child.name}`);
+        continue;
       }
+      const endDate = new Date();
+      const startDate = addDays(endDate, -60);
       await createTrackerEntries(token, profile.id, startDate, endDate);
       console.log(`Generated data for profile: ${profile.name}`);
     }

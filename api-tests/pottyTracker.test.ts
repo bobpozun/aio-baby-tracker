@@ -11,7 +11,7 @@ interface PottyEntry {
   entryId: string;
   time: string;
   type: 'pee' | 'poop' | 'both';
-  location: 'potty' | 'diaper' | 'other';
+
   notes?: string;
   babyId: string;
   trackerType: 'potty';
@@ -53,7 +53,7 @@ describe('Potty Tracker API Endpoints', () => {
     const entryData = {
       time: new Date().toISOString(),
       type: 'poop',
-      location: 'potty',
+
       notes: 'Successful trip!',
     };
 
@@ -65,7 +65,7 @@ describe('Potty Tracker API Endpoints', () => {
     expect(response.trackerType).toBe('potty');
     expect(response.time).toBe(entryData.time);
     expect(response.type).toBe(entryData.type);
-    expect(response.location).toBe(entryData.location);
+
     expect(response.notes).toBe(entryData.notes);
     expect(response.createdAt).toBeDefined();
 
@@ -86,7 +86,7 @@ describe('Potty Tracker API Endpoints', () => {
     expect(foundEntry?.babyId).toBe(testProfileId);
     expect(foundEntry?.trackerType).toBe('potty');
     expect(foundEntry?.type).toBe('poop');
-    expect(foundEntry?.location).toBe('potty');
+
   });
 
   // TODO: Add PUT test for updating an entry if needed

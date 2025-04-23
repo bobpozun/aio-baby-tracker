@@ -8,7 +8,7 @@ import { getCurrentDateTimeLocal, formatDateTimeLocalInput } from '../../utils/d
 
 interface MedicineEntry {
   entryId: string;
-  time: string;
+  createdAt?: string; // ISO string
   medicineName: string;
   dosage?: string;
   notes?: string;
@@ -34,7 +34,11 @@ const MedicineTracker: React.FC = () => {
   } = useTrackerLogic<MedicineEntry>({ trackerType: 'medicine' });
 
   
-  const [time, setTime] = useState(getCurrentDateTimeLocal());
+  const [createdAt, setCreatedAt] = useState(() => {
+  const now = new Date();
+  now.setSeconds(0, 0);
+  return now.toISOString().slice(0, 16);
+});
   const [medicineName, setMedicineName] = useState('');
   const [dosage, setDosage] = useState('');
   const [notes, setNotes] = useState('');
@@ -43,7 +47,7 @@ const MedicineTracker: React.FC = () => {
   
   const resetForm = useCallback(() => {
     console.log('MedicineTracker: resetForm called');
-    setTime(getCurrentDateTimeLocal());
+    setCreatedAt(getCurrentDateTimeLocal());
     setMedicineName('');
     setDosage('');
     setNotes('');
@@ -71,7 +75,7 @@ const MedicineTracker: React.FC = () => {
   
   const handleEditClick = (entry: MedicineEntry) => {
     setEditingEntryId(entry.entryId); 
-    setTime(formatDateTimeLocalInput(entry.time));
+    setCreatedAt(formatDateTimeLocalInput(entry.createdAt));
     setMedicineName(entry.medicineName);
     setDosage(entry.dosage || '');
     setNotes(entry.notes || '');
@@ -81,13 +85,13 @@ const MedicineTracker: React.FC = () => {
   
   const validate = () => {
     if (!selectedProfile) return 'No profile selected.';
-    if (!time || !medicineName) return 'Time and medicine name are required.';
+    if (!createdAt || !medicineName) return 'Time and medicine name are required.';
     return null;
   };
   const buildEntryData = () => {
-    if (!time || !medicineName) return null;
+    if (!createdAt || !medicineName) return null;
     return {
-      time, // Use ISO string directly
+      createdAt, // Use ISO string directly
       medicineName,
       dosage: dosage || undefined,
       notes: notes || undefined,
@@ -131,12 +135,12 @@ const MedicineTracker: React.FC = () => {
             <h3>{editingEntryId ? 'Edit Medicine Dose' : 'Add New Medicine Dose'}</h3>
             <form onSubmit={handleSubmit}>
               <div>
-                <label htmlFor="medicineTime">Time:</label>
+                <label htmlFor="medicineDate">Date:</label>
                 <input
                   type="datetime-local"
-                  id="medicineTime"
-                  value={time}
-                  onChange={(e) => setTime(e.target.value)}
+                  id="medicineDate"
+                  value={createdAt}
+                  onChange={(e) => setCreatedAt(e.target.value)}
                   required
                 />
               </div>
@@ -189,16 +193,17 @@ const MedicineTracker: React.FC = () => {
             ) : (
               <ul>
                 {entries.map((entry) => {
-                  const entryDate = new Date(entry.time);
-                  const isDateValid = !isNaN(entryDate.getTime());
+                  let entryDate: Date | null = null;
+                  let isDateValid = false;
+                  if (entry.createdAt) {
+                    entryDate = new Date(entry.createdAt ?? '');
+                    isDateValid = !isNaN(entryDate.getTime());
+                  }
                   return (
                     <li key={entry.entryId}>
-                      <strong>{entry.medicineName}</strong> {entry.dosage ? `(${entry.dosage})` : ''}
+                      <strong>Date:</strong> {isDateValid && entryDate ? entryDate.toLocaleString(undefined, { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : 'Invalid Date'}
                       <br />
-                      Time:{' '}
-                      {isDateValid
-                        ? entryDate.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
-                        : 'Invalid Date'}
+                      <strong>{entry.medicineName}</strong> {entry.dosage ? `(${entry.dosage})` : ''}
                       {entry.notes && (
                         <>
                           <br />

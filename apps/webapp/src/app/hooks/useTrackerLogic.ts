@@ -2,12 +2,11 @@ import { useState, useEffect, useCallback } from 'react';
 import { useProfiles, BabyProfile } from '../context/ProfileContext';
 import { apiClient } from '../utils/apiClient';
 
-
-
-
 interface BaseTrackerEntry {
+  createdAt?: string;
+  startDateTime?: string;
   entryId: string;
-  time?: string; 
+ 
   date?: string; 
   
 }
@@ -15,7 +14,6 @@ interface BaseTrackerEntry {
 interface UseTrackerLogicProps {
   trackerType: string;
 }
-
 
 interface UseTrackerLogicReturn<T extends BaseTrackerEntry> {
   entries: T[];
@@ -28,7 +26,6 @@ interface UseTrackerLogicReturn<T extends BaseTrackerEntry> {
   fetchEntries: () => Promise<void>;
   handleDeleteEntry: (entryId: string) => Promise<void>;
   hasFetchedEmptyData: boolean;
-  
 }
 
 export function useTrackerLogic<T extends BaseTrackerEntry>({ 
@@ -64,49 +61,29 @@ export function useTrackerLogic<T extends BaseTrackerEntry>({
       );
       console.log(`Fetched ${trackerType} Entries (filtered):`, filteredEntries);
 
-      
-      function normalizeEntryDates(entry: any, trackerType: string) {
+      // Normalize entries per tracker type
+      const normalizedEntries = (filteredEntries || []).map((entry) => {
         switch (trackerType) {
-          case 'sleep':
-            return {
-              ...entry,
-              startTime: entry.startTime || entry.startDateTime || entry.time || '',
-              endTime: entry.endTime || entry.endDateTime || '',
-            };
           case 'nursing':
-            return {
-              ...entry,
-              startTime: entry.startTime || entry.startDateTime || entry.time || '',
-              endTime: entry.endTime || entry.endDateTime || '',
-              durationLeft: entry.durationLeft !== undefined ? Number(entry.durationLeft) : undefined,
-              durationRight: entry.durationRight !== undefined ? Number(entry.durationRight) : undefined,
-            };
-          case 'bottle':
-          case 'diaper':
-          case 'potty':
-          case 'solids':
-          case 'medicine':
-          case 'temperature':
-            return {
-              ...entry,
-              time: entry.time || entry.startDateTime || entry.date || entry.createdAt || '',
-            };
-          case 'growth':
-            return {
-              ...entry,
-              date: entry.date || entry.startDateTime || entry.time || '',
-            };
+            // Use type guard to ensure durationLeft and durationRight are only accessed if present
+            if ('durationLeft' in entry || 'durationRight' in entry) {
+              return {
+                ...entry,
+                durationLeft: (entry as any).durationLeft !== undefined ? Number((entry as any).durationLeft) : undefined,
+                durationRight: (entry as any).durationRight !== undefined ? Number((entry as any).durationRight) : undefined,
+              };
+            }
+            return entry;
           default:
             return entry;
         }
-      }
+      });
 
-      
-      const normalizedEntries = (filteredEntries || []).map(e => normalizeEntryDates(e, trackerType));
+      // Sort entries by startDateTime/createdAt/date descending
       const sortedEntries = normalizedEntries.sort((a, b) => {
-         const dateA = new Date(a.time || a.date || 0).getTime();
-         const dateB = new Date(b.time || b.date || 0).getTime();
-         return dateB - dateA; 
+        const dateA = new Date(a.startDateTime ?? a.createdAt ?? a.date ?? 0).getTime();
+        const dateB = new Date(b.startDateTime ?? b.createdAt ?? b.date ?? 0).getTime();
+        return dateB - dateA;
       });
 
       setEntries(sortedEntries);

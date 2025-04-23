@@ -25,6 +25,8 @@ interface ReportData {
       side?: string;
       duration?: number;
       volume?: number;
+      startDateTime?: string;
+      createdAt?: string;
     }>;
   };
 
@@ -41,11 +43,11 @@ interface ReportData {
   temperatureSummary?: { readingsCount: number; avgTemp?: number; chartData?: any };
 }
 
-
+// Normalize chart data to use startDateTime or createdAt for sorting and display
 function normalizeChartData<T extends Record<string, any>>(data: T[]): T[] {
-  return data.map((e) => ({
-    ...e,
-    startDateTime: e.time || e.startDateTime || e.date || e.createdAt || '',
+  return data.map((entry) => ({
+    ...entry,
+    startDateTime: entry.startDateTime ?? entry.createdAt,
   }));
 }
 
@@ -295,7 +297,7 @@ const ReportsDashboard: React.FC = () => {
                         )}
                     </div>
                   )}
-                  {}
+                  
                   {reportData.growthSummary && (
                     <div>
                       <h4>Growth Summary</h4>
@@ -307,7 +309,6 @@ const ReportsDashboard: React.FC = () => {
                         )}
                     </div>
                   )}
-                  {}
                   {reportData.pottySummary && (
                     <div>
                       <h4>Potty Summary</h4>
@@ -315,16 +316,10 @@ const ReportsDashboard: React.FC = () => {
                       <p>Poop Count: {reportData.pottySummary.poopCount ?? 'N/A'}</p>
                       {Array.isArray(reportData.pottySummary.chartData) &&
                         reportData.pottySummary.chartData.length > 0 && (
-                          <PottyChart
-                            data={reportData.pottySummary.chartData.map((e) => ({
-                              ...e,
-                              startDateTime: e.time || e.startDateTime || e.date || e.createdAt || '',
-                            }))}
-                          />
+                          <PottyChart data={normalizeChartData(reportData.pottySummary.chartData)} />
                         )}
                     </div>
                   )}
-                  {}
                   {reportData.temperatureSummary && (
                     <div>
                       <h4>Temperature Summary</h4>
@@ -332,12 +327,7 @@ const ReportsDashboard: React.FC = () => {
                       <p>Average Temp: {reportData.temperatureSummary.avgTemp?.toFixed(1) ?? 'N/A'}</p>
                       {Array.isArray(reportData.temperatureSummary.chartData) &&
                         reportData.temperatureSummary.chartData.length > 0 && (
-                          <TemperatureChart
-                            data={reportData.temperatureSummary.chartData.map((e) => ({
-                              ...e,
-                              startDateTime: e.time || e.startDateTime || e.date || e.createdAt || '',
-                            }))}
-                          />
+                          <TemperatureChart data={normalizeChartData(reportData.temperatureSummary.chartData)} />
                         )}
                     </div>
                   )}

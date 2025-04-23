@@ -10,7 +10,7 @@ import {
 
 interface GrowthEntry {
   entryId: string;
-  time: string; // ISO string
+  createdAt?: string; // ISO string
   weight?: number;
   weightUnit?: 'kg' | 'lb';
   height?: number;
@@ -40,7 +40,11 @@ const GrowthTracker: React.FC = () => {
   } = useTrackerLogic<GrowthEntry>({ trackerType: 'growth' });
 
   
-  const [time, setTime] = useState(getCurrentDateLocal());
+  const [createdAt, setCreatedAt] = useState(() => {
+    const now = new Date();
+    now.setSeconds(0, 0);
+    return now.toISOString().slice(0, 16);
+  });
   const [weight, setWeight] = useState('');
   const [weightUnit, setWeightUnit] = useState<'kg' | 'lb'>('kg');
   const [height, setHeight] = useState('');
@@ -55,7 +59,7 @@ const GrowthTracker: React.FC = () => {
   
   const resetForm = useCallback(() => {
     console.log('GrowthTracker: resetForm called');
-    setTime(getCurrentDateLocal());
+    setCreatedAt(getCurrentDateLocal());
     setWeight('');
     setWeightUnit('kg');
     setHeight('');
@@ -89,7 +93,7 @@ const GrowthTracker: React.FC = () => {
   
   const handleEditClick = (entry: GrowthEntry) => {
     setEditingEntryId(entry.entryId); 
-    setTime(entry.time); 
+    setCreatedAt(entry?.createdAt ?? ''); 
     setWeight(entry.weight?.toString() || '');
     setWeightUnit(entry.weightUnit || 'kg');
     setHeight(entry.height?.toString() || '');
@@ -102,7 +106,7 @@ const GrowthTracker: React.FC = () => {
   
   const validate = () => {
     if (!selectedProfile) return 'No profile selected.';
-    if (!time) return 'Time is required.';
+    if (!createdAt) return 'Time is required.';
     if (!weight && !height && !headCircumference) {
       return 'Please enter at least one measurement (Weight, Height, or Head Circumference).';
     }
@@ -112,9 +116,9 @@ const GrowthTracker: React.FC = () => {
     return null;
   };
   const buildEntryData = () => {
-    if (!time) return null;
+    if (!createdAt) return null;
     return {
-      time,
+      createdAt: createdAt,
       weight: weight ? parseFloat(weight) : undefined,
       weightUnit: weight ? weightUnit : undefined,
       height: height ? parseFloat(height) : undefined,
@@ -173,12 +177,12 @@ const GrowthTracker: React.FC = () => {
             </h3>
             <form onSubmit={handleSubmit}>
               <div>
-                <label htmlFor="growthTime">Time:</label>
+                <label htmlFor="growthDate">Date:</label>
                 <input
                   type="datetime-local"
-                  id="growthTime"
-                  value={time}
-                  onChange={(e) => setTime(e.target.value)}
+                  id="growthDate"
+                  value={createdAt}
+                  onChange={(e) => setCreatedAt(e.target.value)}
                   required
                 />
               </div>
@@ -282,16 +286,19 @@ const GrowthTracker: React.FC = () => {
             ) : (
               <ul>
                 {entries.map((entry) => {
-                  let entryTime: Date;
-                  if (entry.time.includes('T')) {
-                    entryTime = new Date(entry.time);
-                  } else {
-                    entryTime = new Date(entry.time + 'T00:00:00');
+                  let entryDate: Date | null = null;
+                  let isTimeValid = false;
+                  if (entry.createdAt) {
+                    if (entry.createdAt.includes('T')) {
+                      entryDate = new Date(entry.createdAt);
+                    } else {
+                      entryDate = new Date(entry.createdAt + 'T00:00:00');
+                    }
+                    isTimeValid = !isNaN(entryDate.getTime());
                   }
-                  const isTimeValid = !isNaN(entryTime.getTime());
                   return (
                     <li key={entry.entryId}>
-                      <strong>Time:</strong> {isTimeValid ? entryTime.toLocaleString(undefined, { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : 'Invalid Time'}
+                      <strong>Date:</strong> {isTimeValid && entryDate ? entryDate.toLocaleString(undefined, { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : 'Invalid Time'}
                       {entry.weight && (
                         <>
                           <br /> Weight: {entry.weight} {entry.weightUnit}

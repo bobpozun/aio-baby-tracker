@@ -34,6 +34,23 @@ const createApiResponse = (statusCode: number, body: any): APIGatewayProxyResult
   };
 };
 
+function formatDateMMDDYYYY_HHMMSS(date: string | Date): string {
+  const d = typeof date === 'string' ? new Date(date) : date;
+  if (isNaN(d.getTime())) return '';
+  const pad = (n: number) => n.toString().padStart(2, '0');
+  return `${pad(d.getMonth() + 1)}${pad(d.getDate())}${d.getFullYear()} ${pad(d.getHours())}:${pad(
+    d.getMinutes()
+  )}:${pad(d.getSeconds())}`;
+}
+
+function extractAndFormatTime(entry: any): string {
+  // Always prefer startDateTime, then createdAt
+  const raw = entry.startDateTime || entry.createdAt || entry.startTime || entry.date;
+  if (!raw) return '';
+  const d = new Date(raw);
+  return formatDateMMDDYYYY_HHMMSS(d);
+}
+
 export const handler: Handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
   if (event.httpMethod === 'OPTIONS') {
     return createApiResponse(200, {});
@@ -262,7 +279,12 @@ export const handler: Handler = async (event: APIGatewayProxyEvent): Promise<API
         ScanIndexForward: false,
       });
       const result = await docClient.send(command);
-      return createApiResponse(200, result.Items || []);
+      // Remove 'time' field from all entries before returning
+      const items = (result.Items || []).map((entry) => {
+        
+        return entry;
+      });
+      return createApiResponse(200, items);
     } else if (normalizedPath === '/profiles/{profileId}/trackers/{trackerType}' && httpMethod === 'POST') {
       const babyId = pathParameters?.profileId;
       const trackerType = pathParameters?.trackerType;
@@ -360,30 +382,40 @@ export const handler: Handler = async (event: APIGatewayProxyEvent): Promise<API
       const allEntries = (result.Items || []).filter((entry: any) => {
         if (!trackersArr.includes(entry.trackerType)) return false;
 
-        const entryDateStr = entry.time || entry.startTime;
+        const entryDateStr = entry.startDateTime || entry.createdAt || entry.startTime;
         if (!entryDateStr) return false;
         const entryTime = new Date(entryDateStr);
         return entryTime >= fromDate && entryTime <= now;
       });
+      console.log('DEBUG: allEntries after filter:', JSON.stringify(allEntries, null, 2));
 
       const report: any = {};
       for (const tracker of trackersArr) {
         const entries = allEntries.filter((e: any) => e.trackerType === tracker);
+        console.log(`DEBUG: entries for tracker ${tracker}:`, JSON.stringify(entries, null, 2));
         if (tracker === 'sleep') {
-          const totalHours = entries.reduce((sum: number, e: any) => sum + (e.durationHours || 0), 0);
-          const avgDuration = entries.length ? totalHours / entries.length : 0;
-          const chartData = entries.map((e: any) => ({
-            date: e.time,
-            startDateTime: e.startTime || e.time,
-            hours: e.durationHours || 0,
-          }));
-          report.sleepSummary = { totalHours, avgDuration, chartData };
+           // Calculate duration in hours from startDateTime and endDateTime
+           const getDurationHours = (e: any) => {
+             const start = e.startDateTime ? new Date(e.startDateTime) : null;
+             const end = e.endDateTime ? new Date(e.endDateTime) : null;
+             if (start && end && !isNaN(start.getTime()) && !isNaN(end.getTime())) {
+               return (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+             }
+             return 0;
+           };
+           const totalHours = entries.reduce((sum: number, e: any) => sum + getDurationHours(e), 0);
+           const avgDuration = entries.length ? totalHours / entries.length : 0;
+           const chartData = entries.map((e: any) => ({
+             date: e.startDateTime || e.createdAt || e.startTime,
+             startDateTime: e.startDateTime || e.createdAt || e.startTime,
+             hours: getDurationHours(e),
+           }));
+           report.sleepSummary = { totalHours, avgDuration, chartData };
         } else if (tracker === 'nursing') {
           let chartData: Array<{
             date: string;
             side: string;
             duration: number;
-            volume: number | null;
             startDateTime?: string;
           }> = [];
           let allDurations: number[] = [];
@@ -395,7 +427,6 @@ export const handler: Handler = async (event: APIGatewayProxyEvent): Promise<API
                 startDateTime: e.startTime,
                 side: 'left',
                 duration: e.durationLeft,
-                volume: 0,
               });
               allDurations.push(e.durationLeft);
             }
@@ -405,7 +436,6 @@ export const handler: Handler = async (event: APIGatewayProxyEvent): Promise<API
                 startDateTime: e.startTime,
                 side: 'right',
                 duration: e.durationRight,
-                volume: 0,
               });
               allDurations.push(e.durationRight);
             }
@@ -413,32 +443,33 @@ export const handler: Handler = async (event: APIGatewayProxyEvent): Promise<API
 
           const totalSessions = allDurations.length;
           const avgDuration = totalSessions ? allDurations.reduce((sum, d) => sum + d, 0) / totalSessions : 0;
-          const avgVolume = 0;
           report.nursingSummary = {
             totalSessions,
             avgDuration,
-            avgVolume,
             chartData,
           };
         } else if (tracker === 'bottle') {
           const totalBottles = entries.length;
-          const avgVolume = entries.length
-            ? entries.reduce((sum: number, e: any) => sum + (e.volume || 0), 0) / entries.length
+          const avgAmount = entries.length
+            ? entries.reduce((sum: number, e: any) => sum + (e.amount || 0), 0) / entries.length
             : 0;
           const chartData = entries.map((e: any) => ({
-            date: e.time,
-            startDateTime: e.time,
-            volume: e.volume || 0,
+            date: e.startDateTime || e.createdAt || e.startTime,
+            startDateTime: e.startDateTime || e.createdAt || e.startTime,
+            amount: e.amount || 0,
           }));
-          report.bottleSummary = { totalBottles, avgVolume, chartData };
+          report.bottleSummary = { totalBottles, avgAmount, chartData };
         } else if (tracker === 'diaper') {
           const wetCount = entries.filter((e: any) => e.type === 'wet').length;
           const dirtyCount = entries.filter((e: any) => e.type === 'dirty').length;
-          const chartData = entries.map((e: any) => ({
-            date: e.time,
-            startDateTime: e.time,
-            type: e.type,
-          }));
+          const chartData = entries.map((e: any) => {
+            const time = extractAndFormatTime(e);
+            return {
+              date: time,
+              startDateTime: time,
+              type: e.type,
+            };
+          });
           report.diaperSummary = { wetCount, dirtyCount, chartData };
         } else if (tracker === 'solids') {
           const totalFeedings = entries.length;
@@ -446,28 +477,39 @@ export const handler: Handler = async (event: APIGatewayProxyEvent): Promise<API
             ? entries.reduce((sum: number, e: any) => sum + (e.amount || 0), 0) / entries.length
             : 0;
           const chartData = entries.map((e: any) => ({
-            date: e.time,
-            startDateTime: e.time,
+            date: e.startDateTime || e.createdAt || e.startTime,
+            startDateTime: e.startDateTime || e.createdAt || e.startTime,
             amount: e.amount || 0,
           }));
           report.solidsSummary = { totalFeedings, avgAmount, chartData };
         } else if (tracker === 'medicine') {
-          const totalDoses = entries.length;
-          const medicinesGiven = Array.from(new Set(entries.map((e: any) => e.medicineName).filter(Boolean)));
-          const chartData = entries.map((e: any) => ({
-            date: e.time,
-            startDateTime: e.time,
+          // Only use entries with a valid date
+          const validEntries = entries.filter((e: any) => e.startDateTime || e.createdAt || e.startTime);
+          const totalDoses = validEntries.length;
+          const medicinesGiven = Array.from(new Set(validEntries.map((e: any) => e.medicineName).filter(Boolean)));
+          const chartData = validEntries.map((e: any) => ({
+            date: e.startDateTime || e.createdAt || e.startTime,
+            startDateTime: e.startDateTime || e.createdAt || e.startTime,
             medicineName: e.medicineName || '',
+            trackerType: e.trackerType,
           }));
           report.medicineSummary = { totalDoses, medicinesGiven, chartData };
         } else if (tracker === 'growth') {
-          const sorted = entries.sort((a: any, b: any) => new Date(b.time).getTime() - new Date(a.time).getTime());
+          // Only use entries with a valid date
+          const validEntries = entries.filter((e: any) => e.startDateTime || e.createdAt || e.startTime);
+          // Sort by valid date descending
+          const sorted = validEntries.sort((a: any, b: any) => {
+            const dateA = new Date(a.startDateTime || a.createdAt || a.startTime).getTime();
+            const dateB = new Date(b.startDateTime || b.createdAt || b.startTime).getTime();
+            return dateB - dateA;
+          });
           const latest = sorted[0] || {};
-          const chartData = entries.map((e: any) => ({
-            date: e.time,
-            startDateTime: e.time,
+          const chartData = validEntries.map((e: any) => ({
+            date: e.startDateTime || e.createdAt || e.startTime,
+            startDateTime: e.startDateTime || e.createdAt || e.startTime,
             weight: e.weight,
             height: e.height,
+            trackerType: e.trackerType,
           }));
           report.growthSummary = {
             latestWeight: latest.weight,
@@ -475,24 +517,36 @@ export const handler: Handler = async (event: APIGatewayProxyEvent): Promise<API
             chartData,
           };
         } else if (tracker === 'potty') {
-          const peeCount = entries.filter((e: any) => e.type === 'pee').length;
-          const poopCount = entries.filter((e: any) => e.type === 'poop').length;
-          const chartData = entries.map((e: any) => ({
-            date: e.time,
-            startDateTime: e.time,
-            type: e.type,
-          }));
+          // Only use entries with a valid date
+          const validEntries = entries.filter((e: any) => e.startDateTime || e.createdAt || e.startTime);
+          const peeCount = validEntries.filter((e: any) => e.type === 'pee').length;
+          const poopCount = validEntries.filter((e: any) => e.type === 'poop').length;
+          const chartData = validEntries.map((e: any) => {
+            const dateStr = e.startDateTime || e.createdAt || e.startTime;
+            return {
+              date: dateStr,
+              startDateTime: dateStr,
+              type: e.type,
+              trackerType: e.trackerType,
+            };
+          });
           report.pottySummary = { peeCount, poopCount, chartData };
         } else if (tracker === 'temperature') {
-          const readingsCount = entries.length;
-          const avgTemp = entries.length
-            ? entries.reduce((sum: number, e: any) => sum + (e.temperature || 0), 0) / entries.length
+          // Only use entries with a valid date
+          const validEntries = entries.filter((e: any) => e.startDateTime || e.createdAt || e.startTime);
+          const readingsCount = validEntries.length;
+          const avgTemp = readingsCount
+            ? validEntries.reduce((sum: number, e: any) => sum + (e.temperature || 0), 0) / readingsCount
             : 0;
-          const chartData = entries.map((e: any) => ({
-            date: e.time,
-            startDateTime: e.time,
-            temperature: e.temperature || 0,
-          }));
+          const chartData = validEntries.map((e: any) => {
+            const dateStr = e.startDateTime || e.createdAt || e.startTime;
+            return {
+              date: dateStr,
+              startDateTime: dateStr,
+              temperature: e.temperature || 0,
+              trackerType: e.trackerType,
+            };
+          });
           report.temperatureSummary = { readingsCount, avgTemp, chartData };
         }
       }
@@ -518,23 +572,82 @@ export const handler: Handler = async (event: APIGatewayProxyEvent): Promise<API
         .map((entry: any) => ({
           id: entry.entryId,
           trackerType: entry.trackerType,
-          time: entry.time ?? entry.startTime ?? entry.endTime ?? null,
           notes: entry.notes,
           profileId: entry.babyId,
+          createdAt: entry.createdAt,
+          startDateTime: entry.startDateTime,
+          startTime: entry.startTime,
         }));
       notesEntries.sort((a: any, b: any) => new Date(b.time).getTime() - new Date(a.time).getTime());
       return createApiResponse(200, notesEntries);
+    } else if (normalizedPath === '/checklist' && httpMethod === 'GET') {
+      // GET all custom checklist items for a user and profile
+      // Table schema: partitionKey = userId, sortKey = itemId
+      const { profileId } = event.queryStringParameters || {};
+      if (!profileId) {
+        return createApiResponse(400, { message: 'Missing required query parameter: profileId' });
+      }
+      // Query for all custom items for this user (itemId starts with 'custom_'), filter by profileId
+      const command = new QueryCommand({
+        TableName: checklistStatusTable,
+        KeyConditionExpression: 'userId = :uid AND begins_with(itemId, :custom)',
+        FilterExpression: 'profileId = :pid', // Only non-key attribute in FilterExpression
+        ExpressionAttributeValues: {
+          ':uid': userId,
+          ':custom': 'custom_',
+          ':pid': profileId,
+        },
+      });
+      const result = await docClient.send(command);
+      const customChecklistItems = (result.Items || []).map((item: any) => ({
+        itemId: item.itemId,
+        completed: !!item.completed,
+        text: item.text,
+        week: item.week,
+        profileId: item.profileId,
+        createdAt: item.createdAt,
+        isCustom: true,
+      }));
+      return createApiResponse(200, customChecklistItems);
+    } else if (normalizedPath === '/checklist/status' && httpMethod === 'GET') {
+      // GET all checklist item statuses for a user and profile
+      const { profileId } = event.queryStringParameters || {};
+      if (!profileId) {
+        return createApiResponse(400, { message: 'Missing required query parameter: profileId' });
+      }
+      // Query all checklist items for this user/profile
+      const command = new QueryCommand({
+        TableName: checklistStatusTable,
+        KeyConditionExpression: 'userId = :uid',
+        FilterExpression: 'profileId = :pid',
+        ExpressionAttributeValues: {
+          ':uid': userId,
+          ':pid': profileId,
+        },
+      });
+      const result = await docClient.send(command);
+      // Return only relevant fields for frontend
+      const checklistStatuses = (result.Items || []).map((item: any) => ({
+        itemId: item.itemId,
+        completed: !!item.completed,
+        text: item.text,
+        week: item.week,
+        profileId: item.profileId,
+        createdAt: item.createdAt,
+      }));
+      return createApiResponse(200, checklistStatuses);
     } else if (normalizedPath === '/checklist' && httpMethod === 'POST') {
+      // Add a custom checklist item
       console.log(`ROUTE: POST /checklist for user ${userId}`);
       if (!body || !body.text || typeof body.week !== 'number' || !body.profileId) {
         return createApiResponse(400, {
           message: 'Missing required fields: text, week, profileId',
         });
       }
-      const itemId = `custom_${Date.now()}_${randomUUID().substring(0, 8)}`;
-      const newItem = {
+      const checklistItemId = `custom_${Date.now()}_${randomUUID().substring(0, 8)}`;
+      const checklistItem = {
         userId: userId,
-        itemId: itemId,
+        itemId: checklistItemId,
         text: body.text,
         week: body.week,
         profileId: body.profileId,
@@ -543,21 +656,22 @@ export const handler: Handler = async (event: APIGatewayProxyEvent): Promise<API
       };
       const command = new PutCommand({
         TableName: checklistStatusTable,
-        Item: newItem,
+        Item: checklistItem,
       });
       await docClient.send(command);
-      return createApiResponse(201, newItem);
+      return createApiResponse(201, checklistItem);
     } else if (normalizedPath === '/checklist/status/{itemId}' && httpMethod === 'PUT') {
-      const itemId = pathParameters?.itemId;
-      console.log(`ROUTE: PUT /checklist/status/${itemId} for user ${userId}`);
-      if (!itemId || body === null || typeof body.completed !== 'boolean') {
+      // Update completion status for a checklist item
+      const checklistItemId = pathParameters?.itemId;
+      console.log(`ROUTE: PUT /checklist/status/${checklistItemId} for user ${userId}`);
+      if (!checklistItemId || body === null || typeof body.completed !== 'boolean') {
         return createApiResponse(400, {
           message: 'Missing itemId or invalid body (expected { completed: boolean })',
         });
       }
       const command = new UpdateCommand({
         TableName: checklistStatusTable,
-        Key: { userId: userId, itemId: itemId },
+        Key: { userId: userId, itemId: checklistItemId },
         UpdateExpression: 'set completed = :c, updatedAt = :ua',
         ExpressionAttributeValues: {
           ':c': body.completed,

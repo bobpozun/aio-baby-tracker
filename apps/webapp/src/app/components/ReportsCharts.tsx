@@ -125,6 +125,7 @@ export function NursingChart({
   
   const chartData: Record<string, { date: string; left: number; right: number; startDateTime: string }> = {};
   data.forEach((entry) => {
+    if (!entry.date) return; // Defensive: skip if date is missing
     const key = entry.date.slice(0, 10); 
     const entryDateTime = entry.startDateTime || entry.date;
     if (!chartData[key]) {

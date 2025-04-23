@@ -7,8 +7,10 @@ import { getCurrentDateTimeLocal, formatDateTimeLocalInput } from '../../utils/d
 
 
 interface NursingEntry {
+  createdAt?: string;
+  startDateTime?: string;
   entryId: string;
-  time: string; // ISO string
+
   durationLeft?: number;
   durationRight?: number;
   lastSide?: 'left' | 'right';
@@ -35,7 +37,11 @@ const NursingTracker: React.FC = () => {
   } = useTrackerLogic<NursingEntry>({ trackerType: 'nursing' });
 
   
-  const [time, setStartTime] = useState(getCurrentDateTimeLocal());
+  const [startDateTime, setStartDateTime] = useState(() => {
+    const now = new Date();
+    now.setSeconds(0, 0);
+    return now.toISOString().slice(0, 16);
+  });
   const [durationLeft, setDurationLeft] = useState('');
   const [durationRight, setDurationRight] = useState('');
   const [lastSide, setLastSide] = useState<'left' | 'right' | ''>('');
@@ -45,7 +51,6 @@ const NursingTracker: React.FC = () => {
   
   const resetForm = useCallback(() => {
     console.log('NursingTracker: resetForm called');
-    setStartTime(getCurrentDateTimeLocal());
     setDurationLeft('');
     setDurationRight('');
     setLastSide('');
@@ -75,7 +80,7 @@ const NursingTracker: React.FC = () => {
   
   const handleEditClick = (entry: NursingEntry) => {
     setEditingEntryId(entry.entryId); 
-    setStartTime(formatDateTimeLocalInput(entry.time));
+    setStartDateTime(formatDateTimeLocalInput(entry.startDateTime ?? entry.createdAt));
     setDurationLeft(entry.durationLeft?.toString() || '');
     setDurationRight(entry.durationRight?.toString() || '');
     setLastSide(entry.lastSide || '');
@@ -86,7 +91,7 @@ const NursingTracker: React.FC = () => {
   
   const validate = () => {
     if (!selectedProfile) return 'No profile selected.';
-    if (!time || (!durationLeft && !durationRight)) return 'Start time and at least one duration are required.';
+    if (!startDateTime || (!durationLeft && !durationRight)) return 'Date and at least one duration are required.';
     if (durationLeft && (isNaN(Number(durationLeft)) || Number(durationLeft) < 0))
       return 'Left duration must be a non-negative number.';
     if (durationRight && (isNaN(Number(durationRight)) || Number(durationRight) < 0))
@@ -94,9 +99,9 @@ const NursingTracker: React.FC = () => {
     return null;
   };
   const buildEntryData = () => {
-    if (!time || (!durationLeft && !durationRight)) return null;
+    if (!durationLeft && !durationRight) return null;
     return {
-      time: new Date(time).toISOString(),
+      startDateTime: startDateTime,
       durationLeft: durationLeft ? parseInt(durationLeft, 10) : undefined,
       durationRight: durationRight ? parseInt(durationRight, 10) : undefined,
       lastSide: lastSide || undefined,
@@ -145,12 +150,12 @@ const NursingTracker: React.FC = () => {
             <h3>{editingEntryId ? 'Edit Nursing Session' : 'Add New Nursing Session'}</h3>
             <form onSubmit={handleSubmit}>
               <div>
-                <label htmlFor="nursingStartTime">Start Time:</label>
+                <label htmlFor="nursingDate">Date:</label>
                 <input
                   type="datetime-local"
-                  id="nursingStartTime"
-                  value={time}
-                  onChange={(e) => setStartTime(e.target.value)}
+                  id="nursingDate"
+                  value={startDateTime}
+                  onChange={(e) => setStartDateTime(e.target.value)}
                   required
                 />
               </div>
@@ -221,7 +226,7 @@ const NursingTracker: React.FC = () => {
             ) : (
               <ul>
                 {entries.map((entry) => {
-                  const startDate = new Date(entry.time);
+                  const startDate = new Date(entry.startDateTime ?? entry.createdAt ?? '');
                   const isDateValid = !isNaN(startDate.getTime());
 
                   return (
@@ -242,7 +247,7 @@ const NursingTracker: React.FC = () => {
                         )}
                         {entry.lastSide && <span style={{ color: '#888' }}>(Last Side: {entry.lastSide})</span>}
                       </div>
-                      Start: {isDateValid ? startDate.toLocaleString() : 'Invalid Date'}
+                      Start: {isDateValid ? startDate.toLocaleString(undefined, { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : 'Invalid Date'}
                       {entry.notes && (
                         <>
                           <br />

@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { apiClient } from '../utils/apiClient'; 
-import { ProfileContext } from '../context/ProfileContext'; 
-
+import { apiClient } from '../utils/apiClient';
+import { ProfileContext } from '../context/ProfileContext';
 
 interface NoteEntry {
+  createdAt?: string;
+  startDateTime?: string;
   id: string;
   trackerType: string;
-  time?: string;
   startTime?: string;
+  time?: string;
   notes: string;
   profileId: string;
 }
@@ -21,31 +22,26 @@ const CentralNotes: React.FC = () => {
   const [expandedCounts, setExpandedCounts] = useState<Record<string, number>>({});
   const profileContext = useContext(ProfileContext);
 
-  
   if (!profileContext) {
-    
     return <p>Error: Notes component must be used within a ProfileProvider.</p>;
-    
   }
-  const { selectedProfileId } = profileContext; 
+  const { selectedProfileId } = profileContext;
 
   useEffect(() => {
     const fetchNotes = async () => {
       if (!selectedProfileId) {
-        setAllNotes([]); 
+        setAllNotes([]);
         return;
       }
 
       setIsLoading(true);
       setError(null);
       try {
-        
-        
         const fetchedNotes = await apiClient.get<NoteEntry[]>('/notes', {
           profileId: selectedProfileId,
         });
-        
-        const getNoteDate = (note: any) => note.time || note.startTime || note.endTime;
+
+        const getNoteDate = (note: any) => note.time || note.startTime || note.createdAt;
         const sortedNotes = (fetchedNotes || []).sort(
           (a, b) => new Date(getNoteDate(b)).getTime() - new Date(getNoteDate(a)).getTime()
         );
@@ -53,14 +49,14 @@ const CentralNotes: React.FC = () => {
       } catch (err: any) {
         console.error('Failed to fetch notes:', err);
         setError(err.message || 'Failed to load notes.');
-        setAllNotes([]); 
+        setAllNotes([]);
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchNotes();
-  }, [selectedProfileId]); 
+  }, [selectedProfileId]);
 
   return (
     <div>
@@ -70,15 +66,11 @@ const CentralNotes: React.FC = () => {
       <section>
         {' '}
         {}
-        <p>
-          All notes recorded across different trackers, sorted chronologically.
-        </p>
+        <p>All notes recorded across different trackers, sorted chronologically.</p>
         {}
         {isLoading && <p>Loading notes...</p>}
         {error && <p style={{ color: 'red' }}>Error: {error}</p>}
-        {!isLoading && !error && allNotes.length === 0 && (
-          <p>No notes recorded for this profile yet.</p>
-        )}
+        {!isLoading && !error && allNotes.length === 0 && <p>No notes recorded for this profile yet.</p>}
         {!isLoading && !error && allNotes.length > 0 && (
           <div>
             {Object.entries(
@@ -88,13 +80,21 @@ const CentralNotes: React.FC = () => {
                 return acc;
               }, {} as Record<string, NoteEntry[]>)
             ).map(([trackerType, notes]) => {
-              const sortedNotes = notes
-                .slice()
-                .sort((a, b) => {
-                  const dateA = typeof a.time === 'string' ? new Date(a.time) : (typeof a.startTime === 'string' ? new Date(a.startTime) : new Date(0));
-                  const dateB = typeof b.time === 'string' ? new Date(b.time) : (typeof b.startTime === 'string' ? new Date(b.startTime) : new Date(0));
-                  return dateB.getTime() - dateA.getTime();
-                });
+              const sortedNotes = notes.slice().sort((a, b) => {
+                const dateA =
+                  typeof a.startDateTime === 'string'
+                    ? new Date(a.startDateTime)
+                    : typeof a.createdAt === 'string'
+                    ? new Date(a.createdAt)
+                    : new Date(0);
+                const dateB =
+                  typeof b.startDateTime === 'string'
+                    ? new Date(b.startDateTime)
+                    : typeof b.createdAt === 'string'
+                    ? new Date(b.createdAt)
+                    : new Date(0);
+                return dateB.getTime() - dateA.getTime();
+              });
               const countToShow = expandedCounts[trackerType] ?? NOTES_PER_TYPE_DEFAULT;
               const isTruncated = sortedNotes.length > countToShow;
               const visibleNotes = sortedNotes.slice(0, countToShow);
@@ -104,18 +104,35 @@ const CentralNotes: React.FC = () => {
                   <h3 style={{ textTransform: 'capitalize', borderBottom: '1px solid #eee' }}>{trackerType} Notes</h3>
                   <ul style={{ listStyleType: 'none', paddingLeft: 0 }}>
                     {visibleNotes.map((note) => (
-                      <li key={note.id} style={{ marginBottom: '1em', background: '#fafbfc', borderRadius: 6, padding: '0.5em 1em', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
-                        <div style={{ fontSize: '0.95em', color: '#666' }}>{(() => {
-                          const dateStr = note.time || note.startTime;
-                          if (typeof dateStr === 'string') {
-                            const dateObj = new Date(dateStr);
-                            return !isNaN(dateObj.getTime())
-                              ? dateObj.toLocaleString(undefined, { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
-                              : 'Invalid Date';
-                          } else {
-                            return 'Invalid Date';
-                          }
-                        })()}</div>
+                      <li
+                        key={note.id}
+                        style={{
+                          marginBottom: '1em',
+                          background: '#fafbfc',
+                          borderRadius: 6,
+                          padding: '0.5em 1em',
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+                        }}
+                      >
+                        <div style={{ fontSize: '0.95em', color: '#666' }}>
+                          {(() => {
+                            const dateStr = note.startDateTime || note.createdAt || note.startTime || note.time;
+                            if (typeof dateStr === 'string') {
+                              const dateObj = new Date(dateStr);
+                              return !isNaN(dateObj.getTime())
+                                ? dateObj.toLocaleString(undefined, {
+                                    year: 'numeric',
+                                    month: '2-digit',
+                                    day: '2-digit',
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                  })
+                                : 'Invalid Date';
+                            } else {
+                              return 'Invalid Date';
+                            }
+                          })()}
+                        </div>
                         <div style={{ margin: '5px 0 0 0', fontStyle: 'italic' }}>{note.notes}</div>
                       </li>
                     ))}

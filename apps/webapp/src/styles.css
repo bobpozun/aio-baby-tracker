@@ -204,14 +204,36 @@ button {
   transition: background-color 0.2s ease-in-out;
 }
 
-button:hover:not(:disabled) {
-  background-color: #947a6a; 
+/* Tracker action buttons (edit, delete, inline) */
+.tracker-action-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 5px;
+  border-radius: 3px;
+  font-family: var(--font-heading);
+  font-size: 0.98em;
+  font-weight: 500;
+  transition: color 0.2s, background 0.2s;
+}
+.tracker-edit-btn {
+  color: var(--primary-color);
+  margin-right: 10px;
+}
+.tracker-edit-btn:hover:not(:disabled),
+.tracker-edit-btn:focus-visible {
+  background: #f4ede8;
+  color: #947a6a;
+}
+.tracker-delete-btn {
+  color: #dc3545;
+}
+.tracker-delete-btn:hover:not(:disabled),
+.tracker-delete-btn:focus-visible {
+  background: #fbeaea;
+  color: #a71d2a;
 }
 
-button:disabled {
-  background-color: #ccc;
-  cursor: not-allowed;
-}
 
 hr {
   border: none;

@@ -3,52 +3,51 @@ import { apiClient } from '../../utils/apiClient';
 import { useTrackerLogic } from '../../hooks/useTrackerLogic';
 import { useTrackerForm } from '../../hooks/useTrackerForm';
 
-import { getCurrentDateTimeLocal, formatDateTimeLocalInput } from '../../utils/dateUtils';
-
+import { formatDateTimeLocalInput } from '../../utils/dateUtils';
 
 interface DiaperEntry {
+  createdAt?: string;
+  startDateTime?: string;
   entryId: string;
-  time: string;
-  type: 'wet' | 'dirty' | 'mixed';
+  type?: 'wet' | 'dirty' | 'mixed';
+  wet?: boolean;
+  dirty?: boolean;
   notes?: string;
   babyId: string;
 }
 
-
 type NewDiaperEntryData = Omit<DiaperEntry, 'entryId' | 'babyId'>;
 
 const DiaperTracker: React.FC = () => {
-  
   const {
     entries,
-    isLoading, 
-    error: displayError, 
+    isLoading,
+    error: displayError,
     editingEntryId,
     setEditingEntryId,
-    selectedProfile, 
+    selectedProfile,
     profileName,
-    fetchEntries, 
-    handleDeleteEntry, 
+    fetchEntries,
+    handleDeleteEntry,
     hasFetchedEmptyData,
   } = useTrackerLogic<DiaperEntry>({ trackerType: 'diaper' });
 
-  
-  const [time, setTime] = useState(getCurrentDateTimeLocal());
+  const [createdAt, setCreatedAt] = useState(() => {
+  const now = new Date();
+  now.setSeconds(0, 0);
+  return now.toISOString().slice(0, 16);
+});
   const [type, setType] = useState<'wet' | 'dirty' | 'mixed'>('wet');
   const [notes, setNotes] = useState('');
-  
 
-  
   const resetForm = useCallback(() => {
     console.log('DiaperTracker: resetForm called');
-    setTime(getCurrentDateTimeLocal());
     setType('wet');
     setNotes('');
-    setEditingEntryId(null); 
+    setEditingEntryId(null);
     setFormError(null);
   }, [setEditingEntryId]);
 
-  
   useEffect(() => {
     if (!isLoading && selectedProfile) {
       resetForm();
@@ -58,7 +57,6 @@ const DiaperTracker: React.FC = () => {
     }
   }, [entries, isLoading]);
 
-  
   useEffect(() => {
     if (selectedProfile && !isLoading && entries.length === 0 && !hasFetchedEmptyData) {
       console.log(`DiaperTracker: Fetching entries for profile ${selectedProfile.id}`);
@@ -66,25 +64,22 @@ const DiaperTracker: React.FC = () => {
     }
   }, [selectedProfile?.id, isLoading]);
 
-  
   const handleEditClick = (entry: DiaperEntry) => {
-    setEditingEntryId(entry.entryId); 
-    setTime(formatDateTimeLocalInput(entry.time));
-    setType(entry.type);
+    setEditingEntryId(entry.entryId);
+    setCreatedAt(formatDateTimeLocalInput(entry.startDateTime ?? entry.createdAt));
+    setType(entry.type ?? 'wet');
     setNotes(entry.notes || '');
     setFormError(null);
   };
 
-  
   const validate = () => {
     if (!selectedProfile) return 'No profile selected.';
-    if (!time) return 'Time is required.';
+    if (!createdAt) return 'Time is required.';
     return null;
   };
   const buildEntryData = () => {
-    if (!time) return null;
     return {
-      time,
+      createdAt,
       type,
       notes: notes || undefined,
     };
@@ -101,12 +96,10 @@ const DiaperTracker: React.FC = () => {
     apiClient,
   });
 
-  
   if (isLoading && !selectedProfile) {
     return <div>Loading profile data...</div>;
   }
 
-  
   if (displayError && !selectedProfile) {
     return <div style={{ color: 'red' }}>Error loading profiles: {displayError}</div>;
   }
@@ -127,12 +120,12 @@ const DiaperTracker: React.FC = () => {
             <h3>{editingEntryId ? 'Edit Diaper Change' : 'Add New Diaper Change'}</h3>
             <form onSubmit={handleSubmit}>
               <div>
-                <label htmlFor="diaperTime">Time:</label>
+                <label htmlFor="diaperDate">Date:</label>
                 <input
                   type="datetime-local"
-                  id="diaperTime"
-                  value={time}
-                  onChange={(e) => setTime(e.target.value)}
+                  id="diaperDate"
+                  value={createdAt}
+                  onChange={(e) => setCreatedAt(e.target.value)}
                   required
                 />
               </div>
@@ -207,16 +200,23 @@ const DiaperTracker: React.FC = () => {
             ) : (
               <ul>
                 {entries.map((entry) => {
-                  const entryDate = new Date(entry.time);
+                  const entryDate = new Date(entry.startDateTime ?? entry.createdAt ?? '');
                   const isDateValid = !isNaN(entryDate.getTime());
-                  
-                  const formattedType =
-                    typeof entry.type === 'string' ? entry.type.charAt(0).toUpperCase() + entry.type.slice(1) : 'N/A';
+
+                  // Infer type from wet/dirty if type is missing
+                  let inferredType: string = '(Unknown)';
+                  if (entry.type) {
+                    inferredType = entry.type.charAt(0).toUpperCase() + entry.type.slice(1);
+                  } else if (entry.wet && entry.dirty) {
+                    inferredType = 'Mixed';
+                  } else if (entry.wet) {
+                    inferredType = 'Wet';
+                  } else if (entry.dirty) {
+                    inferredType = 'Dirty';
+                  }
                   return (
                     <li key={entry.entryId}>
-                      <strong>
-                        {formattedType} {}
-                      </strong>
+                      <strong>Type: {inferredType}</strong>
                       <br />
                       Time:{' '}
                       {isDateValid
@@ -274,7 +274,6 @@ const DiaperTracker: React.FC = () => {
           </section>
         </>
       ) : (
-        
         <p style={{ color: 'orange' }}>Please select a baby profile first.</p>
       )}
     </div>

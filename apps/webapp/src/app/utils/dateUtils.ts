@@ -16,8 +16,12 @@ export const getCurrentDateLocal = (): string => {
   return localISOTime;
 };
 
+export function formatTimeForDisplay(time: string): string {
+  if (!time) return '';
+  return time.slice(0, 13) + time.slice(13, 16); // MMDDYYYY HH:MM
+}
 
-export const formatDateTimeLocalInput = (isoString: string | undefined): string => {
+export function formatDateTimeLocalInput(isoString: string | undefined): string {
     if (!isoString) return '';
     try {
       const date = new Date(isoString);
@@ -30,7 +34,7 @@ export const formatDateTimeLocalInput = (isoString: string | undefined): string 
       const localISOTime = new Date(date.getTime() - timezoneOffset)
         .toISOString()
         .slice(0, 16);
-      return localISOTime;
+      return formatTimeForDisplay(localISOTime);
     } catch (e) {
       console.error('[dateUtils] Error formatting date for input:', e);
       return '';

@@ -6,37 +6,32 @@ import { useTrackerForm } from '../../hooks/useTrackerForm';
 
 import { getCurrentDateTimeLocal, formatDateTimeLocalInput } from '../../utils/dateUtils';
 
-
 interface SolidsEntry {
   entryId: string;
-  time: string;
+  createdAt?: string; // ISO string;
   food: string;
   amount?: string;
   reaction?: 'liked' | 'disliked' | 'neutral' | 'allergic';
   notes?: string;
-  imageKey?: string; 
+  imageKey?: string;
   babyId: string;
 }
-
 
 type NewSolidsEntryData = Omit<SolidsEntry, 'entryId' | 'babyId'>;
 
 const SolidsTracker: React.FC = () => {
-  
-
-  
   const validate = () => {
     if (!selectedProfile) return 'No profile selected.';
-    if (!time || !food) return 'Time and food are required.';
+    if (!createdAt) return 'Time is required.';
+    if (!food) return 'Food is required.';
     if (amount && (isNaN(Number(amount)) || Number(amount) <= 0)) return 'Amount must be a positive number.';
     return null;
   };
 
-  
   const buildEntryData = (imageKeyOverride?: string) => {
-    if (!time || !food) return null;
+    if (!createdAt || !food) return null;
     return {
-      time, // already ISO string
+      createdAt, // use the state value, which is ISO string (yyyy-MM-ddTHH:mm)
       food,
       amount: amount ? amount : undefined,
       reaction: reaction || undefined,
@@ -45,22 +40,24 @@ const SolidsTracker: React.FC = () => {
     };
   };
 
-  
   const {
     entries,
-    isLoading, 
-    error: displayError, 
+    isLoading,
+    error: displayError,
     editingEntryId,
     setEditingEntryId,
-    selectedProfile, 
+    selectedProfile,
     profileName,
-    fetchEntries, 
-    handleDeleteEntry: handleDeleteEntryFromHook, 
+    fetchEntries,
+    handleDeleteEntry: handleDeleteEntryFromHook,
     hasFetchedEmptyData,
   } = useTrackerLogic<SolidsEntry>({ trackerType: 'solids' });
 
-  
-  const [time, setTime] = useState(getCurrentDateTimeLocal());
+  const [createdAt, setCreatedAt] = useState(() => {
+    const now = new Date();
+    now.setSeconds(0, 0);
+    return now.toISOString().slice(0, 16);
+  });
   const [food, setFood] = useState('');
   const [amount, setAmount] = useState('');
   const [reaction, setReaction] = useState<'liked' | 'disliked' | 'neutral' | 'allergic' | ''>('');
@@ -69,12 +66,9 @@ const SolidsTracker: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
   const [logImageUrls, setLogImageUrls] = useState<Record<string, string>>({});
-  
 
-  
   const resetForm = useCallback(() => {
-    console.log('SolidsTracker: resetForm called');
-    setTime(getCurrentDateTimeLocal());
+    setCreatedAt(getCurrentDateTimeLocal());
     setFood('');
     setAmount('');
     setReaction('');
@@ -84,11 +78,11 @@ const SolidsTracker: React.FC = () => {
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
-    setEditingEntryId(null); 
+    setEditingEntryId(null);
     setFormError(null);
+    setImageKey(undefined);
   }, [setEditingEntryId]);
 
-  
   useEffect(() => {
     const fetchLogImageUrls = async () => {
       const urls: Record<string, string> = {};
@@ -112,7 +106,6 @@ const SolidsTracker: React.FC = () => {
     }
   }, [entries, isLoading, logImageUrls]);
 
-  
   useEffect(() => {
     if (!isLoading && selectedProfile) {
       resetForm();
@@ -122,7 +115,6 @@ const SolidsTracker: React.FC = () => {
     }
   }, [selectedProfile?.id, isLoading, resetForm]);
 
-  
   useEffect(() => {
     if (selectedProfile && !isLoading && entries.length === 0 && !hasFetchedEmptyData) {
       fetchEntries();
@@ -136,15 +128,15 @@ const SolidsTracker: React.FC = () => {
     setImagePreviewUrl(null);
   };
 
-  
   const handleEditClick = async (entry: SolidsEntry) => {
-    setEditingEntryId(entry.entryId); 
-    setTime(formatDateTimeLocalInput(entry.time));
+    setEditingEntryId(entry.entryId);
+    setCreatedAt(formatDateTimeLocalInput(entry.createdAt));
     setFood(entry.food);
     setAmount(entry.amount || '');
     setReaction(entry.reaction || '');
     setNotes(entry.notes || '');
     setSelectedFile(null);
+    setImageKey(entry.imageKey || undefined);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -161,16 +153,13 @@ const SolidsTracker: React.FC = () => {
     }
   };
 
-  
   const handleDeleteEntry = async (entryId: string) => {
     if (!selectedProfile) return;
     const entryToDelete = entries.find((e) => e.entryId === entryId);
     const imageKeyToDelete = entryToDelete?.imageKey;
 
-    
     await handleDeleteEntryFromHook(entryId);
 
-    
     if (imageKeyToDelete) {
       try {
         await remove({ key: imageKeyToDelete });
@@ -182,14 +171,13 @@ const SolidsTracker: React.FC = () => {
     }
   };
 
-  
   const [imageKey, setImageKey] = useState<string | undefined>(undefined);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedProfile || !time || !food) return;
+    if (!selectedProfile || !createdAt || !food) return;
     setFormError(null);
     setIsSubmitting(true);
     let newImageKey = imageKey;
@@ -205,7 +193,7 @@ const SolidsTracker: React.FC = () => {
         return;
       }
     }
-    
+
     const customBuildEntryData = () => buildEntryData(newImageKey);
     try {
       await useTrackerForm<NewSolidsEntryData>({
@@ -226,12 +214,10 @@ const SolidsTracker: React.FC = () => {
     }
   };
 
-  
   if (isLoading && !selectedProfile) {
     return <div>Loading profile data...</div>;
   }
 
-  
   if (displayError && !selectedProfile) {
     return <div style={{ color: 'red' }}>Error loading profiles: {displayError}</div>;
   }
@@ -252,12 +238,12 @@ const SolidsTracker: React.FC = () => {
             <h3>{editingEntryId ? 'Edit Solid Food Entry' : 'Add New Solid Food Entry'}</h3>
             <form onSubmit={handleSubmit}>
               <div>
-                <label htmlFor="solidsTime">Time:</label>
+                <label htmlFor="solidsDate">Date:</label>
                 <input
                   type="datetime-local"
-                  id="solidsTime"
-                  value={time}
-                  onChange={(e) => setTime(e.target.value)}
+                  id="solidsDate"
+                  value={createdAt}
+                  onChange={(e) => setCreatedAt(e.target.value)}
                   required
                 />
               </div>
@@ -316,7 +302,6 @@ const SolidsTracker: React.FC = () => {
 
           <section>
             <h3>Solids Log {profileName ? `for ${profileName}` : ''}</h3>
-            {}
             {isLoading && entries.length === 0 ? (
               <p>Loading log...</p>
             ) : entries.length === 0 && hasFetchedEmptyData ? (
@@ -326,25 +311,40 @@ const SolidsTracker: React.FC = () => {
             ) : (
               <ul>
                 {entries.map((entry) => {
-                  const entryDate = new Date(entry.time);
-                  const isDateValid = !isNaN(entryDate.getTime());
-                  
+                  let createdAt: Date | null = null;
+                  let isDateValid = false;
+                  if (entry.createdAt) {
+                    createdAt = new Date(entry.createdAt);
+                    isDateValid = !isNaN(createdAt.getTime());
+                  }
                   const formattedReaction = entry.reaction ? ` - Reaction: ${entry.reaction}` : '';
                   return (
                     <li key={entry.entryId}>
-                      <strong>{entry.food}</strong> {entry.amount ? `(${entry.amount})` : ''}
-                      {formattedReaction}
-                      <br />
-                      Time:{' '}
-                      {isDateValid
-                        ? entryDate.toLocaleString(undefined, {
+                      <strong>Date:</strong>{' '}
+                      {isDateValid && createdAt
+                        ? createdAt.toLocaleString(undefined, {
                             year: 'numeric',
                             month: '2-digit',
                             day: '2-digit',
                             hour: '2-digit',
                             minute: '2-digit',
                           })
-                        : 'Invalid Date'}
+                        : 'Invalid Time'}
+                      {entry.amount && (
+                        <>
+                          <br /> Amount: {entry.amount}
+                        </>
+                      )}
+                      {entry.reaction && (
+                        <>
+                          <br /> Reaction: {entry.reaction}
+                        </>
+                      )}
+                      {entry.notes && (
+                        <>
+                          <br /> Notes: {entry.notes}
+                        </>
+                      )}
                       {entry.imageKey && (
                         <div style={{ marginTop: '5px' }}>
                           {logImageUrls[entry.entryId] ? (
@@ -362,24 +362,12 @@ const SolidsTracker: React.FC = () => {
                           )}
                         </div>
                       )}
-                      {entry.notes && (
-                        <>
-                          <br />
-                          Notes: {entry.notes}
-                        </>
-                      )}
+                      {/* Display edit and delete links */}
                       <div style={{ marginTop: '5px' }}>
                         <button
                           onClick={() => handleEditClick(entry)}
                           disabled={isLoading || isSubmitting || !!editingEntryId}
-                          style={{
-                            marginRight: '10px',
-                            background: 'none',
-                            border: 'none',
-                            cursor: 'pointer',
-                            padding: '2px 5px',
-                            color: 'var(--primary-color)',
-                          }}
+                          className="tracker-action-btn tracker-edit-btn"
                           title="Edit entry"
                         >
                           Edit
@@ -387,14 +375,7 @@ const SolidsTracker: React.FC = () => {
                         <button
                           onClick={() => handleDeleteEntry(entry.entryId)}
                           disabled={isLoading || isSubmitting || !!editingEntryId}
-                          style={{
-                            marginLeft: '10px',
-                            color: 'red',
-                            background: 'none',
-                            border: 'none',
-                            cursor: 'pointer',
-                            padding: '2px 5px',
-                          }}
+                          className="tracker-action-btn tracker-delete-btn"
                           title="Delete entry"
                         >
                           Delete
@@ -408,7 +389,6 @@ const SolidsTracker: React.FC = () => {
           </section>
         </>
       ) : (
-        
         <p style={{ color: 'orange' }}>Please select a baby profile first.</p>
       )}
     </div>

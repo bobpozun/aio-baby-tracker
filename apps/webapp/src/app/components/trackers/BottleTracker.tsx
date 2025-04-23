@@ -7,9 +7,10 @@ import { getCurrentDateTimeLocal, formatDateTimeLocalInput } from '../../utils/d
 
 
 interface BottleEntry {
+  createdAt?: string;
+  startDateTime?: string;
   entryId: string;
-  time: string;
-  volume: number;
+  amount: number;
   unit: 'ml' | 'oz';
   type: 'formula' | 'breast_milk' | 'other';
   notes?: string;
@@ -35,8 +36,12 @@ const BottleTracker: React.FC = () => {
   } = useTrackerLogic<BottleEntry>({ trackerType: 'bottle' });
 
   
-  const [time, setTime] = useState(getCurrentDateTimeLocal());
-  const [volume, setVolume] = useState('');
+  const [createdAt, setCreatedAt] = useState(() => {
+    const now = new Date();
+    now.setSeconds(0, 0);
+    return now.toISOString().slice(0, 16);
+  });
+  const [amount, setAmount] = useState('');
   const [unit, setUnit] = useState<'ml' | 'oz'>('ml');
   const [type, setType] = useState<'formula' | 'breast_milk' | 'other'>('formula');
   const [notes, setNotes] = useState('');
@@ -45,8 +50,8 @@ const BottleTracker: React.FC = () => {
   
   const resetForm = useCallback(() => {
     console.log('BottleTracker: resetForm called');
-    setTime(getCurrentDateTimeLocal());
-    setVolume('');
+    setCreatedAt(new Date().toISOString());
+    setAmount('');
     setUnit('ml');
     setType('formula');
     setNotes('');
@@ -75,8 +80,8 @@ const BottleTracker: React.FC = () => {
   
   const handleEditClick = (entry: BottleEntry) => {
     setEditingEntryId(entry.entryId); 
-    setTime(formatDateTimeLocalInput(entry.time));
-    setVolume(entry.volume.toString());
+    setCreatedAt(formatDateTimeLocalInput(entry.startDateTime ?? entry.createdAt));
+    setAmount(entry.amount?.toString() || '');
     setUnit(entry.unit);
     setType(entry.type);
     setNotes(entry.notes || '');
@@ -86,15 +91,15 @@ const BottleTracker: React.FC = () => {
   
   const validate = () => {
     if (!selectedProfile) return 'No profile selected.';
-    if (!time || !volume) return 'Time and volume are required.';
-    if (isNaN(Number(volume)) || Number(volume) <= 0) return 'Volume must be a positive number.';
+    if (!amount) return 'Amount is required.';
+    if (isNaN(Number(amount)) || Number(amount) <= 0) return 'Amount must be a positive number.';
     return null;
   };
   const buildEntryData = () => {
-    if (!time || !volume) return null;
+    if (!amount) return null;
     return {
-      time, // Use ISO string directly
-      volume: parseFloat(volume),
+      createdAt,
+      amount: parseFloat(amount),
       unit,
       type,
       notes: notes || undefined,
@@ -138,12 +143,12 @@ const BottleTracker: React.FC = () => {
             <h3>{editingEntryId ? 'Edit Bottle Feeding' : 'Add New Bottle Feeding'}</h3>
             <form onSubmit={handleSubmit}>
               <div>
-                <label htmlFor="bottleTime">Time:</label>
+                <label htmlFor="bottleDate">Date:</label>
                 <input
                   type="datetime-local"
                   id="bottleTime"
-                  value={time}
-                  onChange={(e) => setTime(e.target.value)}
+                  value={createdAt}
+                  onChange={(e) => setCreatedAt(e.target.value)}
                   required
                 />
               </div>
@@ -154,8 +159,8 @@ const BottleTracker: React.FC = () => {
                   id="bottleAmount"
                   min="0"
                   step="any" 
-                  value={volume}
-                  onChange={(e) => setVolume(e.target.value)}
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
                   required
                 />
                 <select value={unit} onChange={(e) => setUnit(e.target.value as 'ml' | 'oz')}>
@@ -206,20 +211,20 @@ const BottleTracker: React.FC = () => {
             ) : (
               <ul>
                 {entries.map((entry) => {
-                  const entryDate = new Date(entry.time);
+                  const entryDate = new Date(entry.createdAt ?? '');
                   const isDateValid = !isNaN(entryDate.getTime());
-                  const volume = entry.volume ?? null;
-                  const unit = entry.unit ?? (entry.volume ? 'ml' : null);
+                  const amount = entry.amount ?? null;
+                  const unit = entry.unit ?? (entry.amount ? 'ml' : null);
                   const type = entry.type ?? 'formula';
                   const formattedType = typeof type === 'string' ? type.replace('_', ' ') : 'N/A';
                   return (
                     <li key={entry.entryId}>
-                      <strong>{volume !== null && volume !== undefined ? `${volume} ${unit}` : '(N/A)'}</strong>
+                      <strong>{amount !== null && amount !== undefined ? `${amount} ${unit}` : '(N/A)'}</strong>
                       {type ? ` (${formattedType})` : ''}
                       <br />
-                      Time:{' '}
+                      Date:{' '}
                       {isDateValid
-                        ? entryDate.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
+                        ? entryDate.toLocaleString(undefined, { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
                         : 'Invalid Date'}
                       {entry.notes && (
                         <>
