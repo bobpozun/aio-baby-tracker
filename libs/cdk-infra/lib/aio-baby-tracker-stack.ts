@@ -8,12 +8,13 @@ import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 import * as sns from 'aws-cdk-lib/aws-sns';
 import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
-import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
+import { S3Origin } from 'aws-cdk-lib/aws-cloudfront-origins';
 import * as s3deploy from 'aws-cdk-lib/aws-s3-deployment';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as path from 'path';
 
 export class AioBabyTrackerStack extends cdk.Stack {
+  public readonly pregnancyGuideImagesBucket: s3.Bucket;
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
@@ -51,20 +52,14 @@ export class AioBabyTrackerStack extends cdk.Stack {
       removalPolicy: cdk.RemovalPolicy.RETAIN,
     });
 
-    const userPoolClient = new cognito.UserPoolClient(
-      this,
-      'AioUserPoolClient',
-      {
-        userPool: userPool,
-        userPoolClientName: 'aio-webapp-client',
-        authFlows: {
-          userSrp: true,
-        },
-        supportedIdentityProviders: [
-          cognito.UserPoolClientIdentityProvider.COGNITO,
-        ],
-      }
-    );
+    const userPoolClient = new cognito.UserPoolClient(this, 'AioUserPoolClient', {
+      userPool: userPool,
+      userPoolClientName: 'aio-webapp-client',
+      authFlows: {
+        userSrp: true,
+      },
+      supportedIdentityProviders: [cognito.UserPoolClientIdentityProvider.COGNITO],
+    });
 
     const usersTable = new dynamodb.Table(this, 'UsersTable', {
       tableName: 'aio-users',
@@ -81,29 +76,21 @@ export class AioBabyTrackerStack extends cdk.Stack {
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
 
-    const trackerEntriesTable = new dynamodb.Table(
-      this,
-      'TrackerEntriesTable',
-      {
-        tableName: 'aio-tracker-entries',
-        partitionKey: { name: 'babyId', type: dynamodb.AttributeType.STRING },
-        sortKey: { name: 'entryId', type: dynamodb.AttributeType.STRING },
-        billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
-        removalPolicy: cdk.RemovalPolicy.DESTROY,
-      }
-    );
+    const trackerEntriesTable = new dynamodb.Table(this, 'TrackerEntriesTable', {
+      tableName: 'aio-tracker-entries',
+      partitionKey: { name: 'babyId', type: dynamodb.AttributeType.STRING },
+      sortKey: { name: 'entryId', type: dynamodb.AttributeType.STRING },
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
 
-    const checklistStatusTable = new dynamodb.Table(
-      this,
-      'ChecklistStatusTable',
-      {
-        tableName: 'aio-checklist-status',
-        partitionKey: { name: 'userId', type: dynamodb.AttributeType.STRING },
-        sortKey: { name: 'itemId', type: dynamodb.AttributeType.STRING },
-        billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
-        removalPolicy: cdk.RemovalPolicy.DESTROY,
-      }
-    );
+    const checklistStatusTable = new dynamodb.Table(this, 'ChecklistStatusTable', {
+      tableName: 'aio-checklist-status',
+      partitionKey: { name: 'userId', type: dynamodb.AttributeType.STRING },
+      sortKey: { name: 'itemId', type: dynamodb.AttributeType.STRING },
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
 
     const assetsBucket = new s3.Bucket(this, 'AioAssetsBucket', {
       bucketName: `aio-baby-tracker-assets`,
@@ -121,43 +108,134 @@ export class AioBabyTrackerStack extends cdk.Stack {
       autoDeleteObjects: true,
     });
 
-    const distribution = new cloudfront.Distribution(
-      this,
-      'AioWebAppDistribution',
-      {
-        defaultBehavior: {
-          origin: new origins.S3Origin(hostingBucket, { originPath: '/' }),
-          viewerProtocolPolicy:
-            cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
-          cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
-          allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD_OPTIONS,
-        },
-        defaultRootObject: 'index.html',
-        priceClass: cloudfront.PriceClass.PRICE_CLASS_ALL,
-        errorResponses: [
+    const pregnancyGuideImagesBucket = new s3.Bucket(this, 'AioPregnancyGuideImagesBucket', {
+      bucketName: 'aio-pregnancy-guide-images',
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+      encryption: s3.BucketEncryption.S3_MANAGED,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+      autoDeleteObjects: true,
+    });
+    this.pregnancyGuideImagesBucket = pregnancyGuideImagesBucket;
+
+    // CloudFront OAC for private access to pregnancy guide images
+    const imagesOac = new cloudfront.CfnOriginAccessControl(this, 'PregnancyGuideImagesOAC', {
+      originAccessControlConfig: {
+        name: 'PregnancyGuideImagesOAC',
+        originAccessControlOriginType: 's3',
+        signingBehavior: 'always',
+        signingProtocol: 'sigv4',
+        description: 'OAC for private S3 access to pregnancy guide images',
+      },
+    });
+
+    // L1 CfnDistribution for OAC-only CloudFront (no OAI)
+    const imagesDistribution = new cloudfront.CfnDistribution(this, 'PregnancyGuideImagesDistributionV3', {
+      distributionConfig: {
+        enabled: true,
+        origins: [
           {
-            httpStatus: 403,
-            responseHttpStatus: 200,
-            responsePagePath: '/index.html',
-            ttl: cdk.Duration.minutes(0)
-          },
-          {
-            httpStatus: 404,
-            responseHttpStatus: 200,
-            responsePagePath: '/index.html',
-            ttl: cdk.Duration.minutes(0),
+            id: 'PregnancyGuideImagesOrigin',
+            domainName: pregnancyGuideImagesBucket.bucketRegionalDomainName,
+            s3OriginConfig: {}, // No OAI specified
+            originAccessControlId: imagesOac.ref,
           },
         ],
-      }
-    );
+        defaultCacheBehavior: {
+          targetOriginId: 'PregnancyGuideImagesOrigin',
+          viewerProtocolPolicy: 'redirect-to-https',
+          allowedMethods: ['GET', 'HEAD', 'OPTIONS'],
+          cachedMethods: ['GET', 'HEAD', 'OPTIONS'],
+          cachePolicyId: cloudfront.CachePolicy.CACHING_OPTIMIZED.cachePolicyId,
+        },
+        priceClass: 'PriceClass_100',
+        comment: 'CloudFront distribution for pregnancy guide images',
+        defaultRootObject: '',
+      },
+    });
+
+    // Grant CloudFront OAC permission to read from the S3 bucket
+    const account = cdk.Stack.of(this).account;
+    const distributionArn = `arn:aws:cloudfront::${account}:distribution/${imagesDistribution.ref}`;
+    pregnancyGuideImagesBucket.addToResourcePolicy(new iam.PolicyStatement({
+      actions: ['s3:GetObject'],
+      resources: [pregnancyGuideImagesBucket.arnForObjects('*')],
+      principals: [new iam.ServicePrincipal('cloudfront.amazonaws.com')],
+      conditions: {
+        StringEquals: {
+          'AWS:SourceArn': distributionArn,
+        },
+      },
+      effect: iam.Effect.ALLOW,
+    }));
+
+    // Output CloudFront domain for UI usage
+    new cdk.CfnOutput(this, 'PregnancyGuideImagesCloudFrontDomain', {
+      value: imagesDistribution.attrDomainName,
+      description: 'CloudFront domain for pregnancy guide images',
+    });
+
+    // The bucket remains private; images are only accessible via CloudFront.
+
+    // Removed public bucket policy
+
+    // Use S3Origin (legacy) to avoid abstract class error with S3BucketOrigin.
+    const distribution = new cloudfront.Distribution(this, 'AioWebAppDistribution', {
+      defaultBehavior: {
+        origin: new S3Origin(hostingBucket, { originPath: '/' }),
+        viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+        cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
+        allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD_OPTIONS,
+      },
+      defaultRootObject: 'index.html',
+      priceClass: cloudfront.PriceClass.PRICE_CLASS_ALL,
+      errorResponses: [
+        {
+          httpStatus: 403,
+          responseHttpStatus: 200,
+          responsePagePath: '/index.html',
+          ttl: cdk.Duration.minutes(0),
+        },
+        {
+          httpStatus: 404,
+          responseHttpStatus: 200,
+          responsePagePath: '/index.html',
+          ttl: cdk.Duration.minutes(0),
+        },
+      ],
+    });
 
     new s3deploy.BucketDeployment(this, 'DeployAioWebApp', {
       sources: [
-        s3deploy.Source.asset(
-          path.join(__dirname, '../../../dist/apps/webapp'), {
-            exclude: ['**/*.map', '**/*.test.*', '**/*.spec.*', '**/*.md', '**/*.DS_Store', '**/*.log', '**/*.zip', '**/*.tar', '**/*.7z', '**/*.gz', '**/*.mov', '**/*.mp4', '**/*.avi', '**/*.mkv', '**/*.webm', '**/.*', '**/node_modules/**', '**/coverage/**', '**/dist/**', '**/tmp/**', '**/logs/**', '**/*~', '**/*.bak', '**/*.swp', '**/*.tmp', '**/*.large']
-          }
-        ),
+        s3deploy.Source.asset(path.join(__dirname, '../../../dist/apps/webapp'), {
+          exclude: [
+            '**/*.map',
+            '**/*.test.*',
+            '**/*.spec.*',
+            '**/*.md',
+            '**/*.DS_Store',
+            '**/*.log',
+            '**/*.zip',
+            '**/*.tar',
+            '**/*.7z',
+            '**/*.gz',
+            '**/*.mov',
+            '**/*.mp4',
+            '**/*.avi',
+            '**/*.mkv',
+            '**/*.webm',
+            '**/.*',
+            '**/node_modules/**',
+            '**/coverage/**',
+            '**/dist/**',
+            '**/tmp/**',
+            '**/logs/**',
+            '**/*~',
+            '**/*.bak',
+            '**/*.swp',
+            '**/*.tmp',
+            '**/*.large',
+          ],
+        }),
       ],
       destinationBucket: hostingBucket,
       distribution: distribution,
@@ -181,13 +259,9 @@ export class AioBabyTrackerStack extends cdk.Stack {
     babiesTable.grantReadWriteData(apiLambda);
     trackerEntriesTable.grantReadWriteData(apiLambda);
     checklistStatusTable.grantReadWriteData(apiLambda);
-    const authorizer = new apigateway.CognitoUserPoolsAuthorizer(
-      this,
-      'AioCognitoAuthorizer',
-      {
-        cognitoUserPools: [userPool],
-      }
-    );
+    const authorizer = new apigateway.CognitoUserPoolsAuthorizer(this, 'AioCognitoAuthorizer', {
+      cognitoUserPools: [userPool],
+    });
 
     const api = new apigateway.LambdaRestApi(this, 'AioApiGateway', {
       handler: apiLambda,
@@ -221,10 +295,12 @@ export class AioBabyTrackerStack extends cdk.Stack {
       authorizer: authorizer,
     });
 
-    profilesResource.addMethod('GET', undefined, { authorizationType: apigateway.AuthorizationType.COGNITO,
+    profilesResource.addMethod('GET', undefined, {
+      authorizationType: apigateway.AuthorizationType.COGNITO,
       authorizer: authorizer,
     });
-    profilesResource.addMethod('POST', undefined, { authorizationType: apigateway.AuthorizationType.COGNITO,
+    profilesResource.addMethod('POST', undefined, {
+      authorizationType: apigateway.AuthorizationType.COGNITO,
       authorizer: authorizer,
     });
 
@@ -251,8 +327,8 @@ export class AioBabyTrackerStack extends cdk.Stack {
 
     const trackerEntryIdResource = trackerTypeResource.addResource('{entryId}');
     trackerEntryIdResource.addMethod('DELETE', undefined, {
-        authorizationType: apigateway.AuthorizationType.COGNITO,
-        authorizer: authorizer,
+      authorizationType: apigateway.AuthorizationType.COGNITO,
+      authorizer: authorizer,
     });
 
     const checklistResource = api.root.addResource('checklist');
@@ -271,13 +347,11 @@ export class AioBabyTrackerStack extends cdk.Stack {
       authorizer: authorizer,
     });
 
-    const checklistItemIdResource =
-      checklistStatusResource.addResource('{itemId}');
+    const checklistItemIdResource = checklistStatusResource.addResource('{itemId}');
     checklistItemIdResource.addMethod('PUT', undefined, {
       authorizationType: apigateway.AuthorizationType.COGNITO,
       authorizer: authorizer,
     });
-
 
     // TODO: Add routes for custom checklist items if implementing that feature
 

@@ -10,8 +10,8 @@ interface UseTrackerFormOptions<T> {
   validate: () => string | null; 
   resetForm: () => void;
   apiClient: {
-    post: <R>(url: string, data: any) => Promise<R>;
-    put: <R>(url: string, data: any) => Promise<R>;
+    post: <R>(url: string, data: unknown) => Promise<R>;
+    put: <R>(url: string, data: unknown) => Promise<R>;
   };
 }
 
@@ -57,8 +57,12 @@ export function useTrackerForm<T>({
       await fetchEntries();
       resetForm();
       setEditingEntryId(null);
-    } catch (err: any) {
-      setFormError(err.message || 'Failed to save entry.');
+    } catch (err: unknown) {
+      let errorMsg = 'Unknown error';
+if (err instanceof Error) errorMsg = err.message;
+else if (typeof err === 'string') errorMsg = err;
+else try { errorMsg = JSON.stringify(err); } catch {}
+setFormError(errorMsg || 'Failed to save entry.');
     } finally {
       setIsSubmitting(false);
     }

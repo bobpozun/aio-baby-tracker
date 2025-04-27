@@ -137,7 +137,7 @@ const [endDateTime, setEndDateTime] = useState('');
 
   return (
     <div>
-      <h2>Sleep Tracker {profileName ? `for ${profileName}` : '(Select Profile...)'}</h2>
+      <h2 className="tracker-title">Sleep Tracker {profileName ? `for ${profileName}` : '(Select Profile...)'}</h2>
 
       {}
       {formError && <p style={{ color: 'red' }}>Error: {formError}</p>}
@@ -147,7 +147,7 @@ const [endDateTime, setEndDateTime] = useState('');
       {}
       {selectedProfile ? (
         <>
-          <section>
+          <section className="section-card">
             <h3>{editingEntryId ? 'Edit Sleep Entry' : 'Add New Sleep Entry'}</h3>
             <form onSubmit={handleSubmit}>
               <div>
@@ -189,7 +189,7 @@ const [endDateTime, setEndDateTime] = useState('');
                   type="button"
                   onClick={resetForm}
                   disabled={isSubmitting} 
-                  style={{ marginLeft: '10px' }}
+                  className="tracker-cancel-btn"
                 >
                   Cancel Edit
                 </button>
@@ -199,7 +199,7 @@ const [endDateTime, setEndDateTime] = useState('');
 
           <hr />
 
-          <section>
+          <section className="section-card">
             <h3>Sleep Log {profileName ? `for ${profileName}` : ''}</h3>
             {}
             {isLoading && entries.length === 0 ? (
@@ -231,18 +231,11 @@ const [endDateTime, setEndDateTime] = useState('');
           Notes: {entry.notes}
         </>
       )}
-      <div style={{ marginTop: '5px' }}>
+      <div className="tracker-log-actions">
         <button
           onClick={() => handleEditClick(entry)}
           disabled={isLoading || isSubmitting || !!editingEntryId}
-          style={{
-            marginRight: '10px',
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            padding: '2px 5px',
-            color: 'var(--primary-color)',
-          }}
+          className="tracker-action-btn tracker-edit-btn"
           title="Edit entry"
         >
           Edit
@@ -250,14 +243,7 @@ const [endDateTime, setEndDateTime] = useState('');
         <button
           onClick={() => handleDeleteEntry(entry.entryId)}
           disabled={isLoading || isSubmitting || !!editingEntryId}
-          style={{
-            marginLeft: '10px',
-            color: 'red',
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            padding: '2px 5px',
-          }}
+          className="tracker-action-btn tracker-delete-btn"
           title="Delete entry"
         >
           Delete

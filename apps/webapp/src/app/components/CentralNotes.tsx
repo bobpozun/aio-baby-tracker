@@ -8,7 +8,6 @@ interface NoteEntry {
   id: string;
   trackerType: string;
   startTime?: string;
-  time?: string;
   notes: string;
   profileId: string;
 }
@@ -59,11 +58,9 @@ const CentralNotes: React.FC = () => {
   }, [selectedProfileId]);
 
   return (
-    <div>
-      {' '}
-      {}
-      <h2>Central Notes Log</h2> {}
-      <section>
+    <div className="main-container">
+      <h2>Central Notes Log</h2>
+      <section className="section-card">
         {' '}
         {}
         <p>All notes recorded across different trackers, sorted chronologically.</p>
@@ -116,7 +113,7 @@ const CentralNotes: React.FC = () => {
                       >
                         <div style={{ fontSize: '0.95em', color: '#666' }}>
                           {(() => {
-                            const dateStr = note.startDateTime || note.createdAt || note.startTime || note.time;
+                            const dateStr = note.startDateTime || note.createdAt || note.startTime;
                             if (typeof dateStr === 'string') {
                               const dateObj = new Date(dateStr);
                               return !isNaN(dateObj.getTime())

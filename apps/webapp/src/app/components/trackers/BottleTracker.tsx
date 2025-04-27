@@ -129,7 +129,7 @@ const BottleTracker: React.FC = () => {
 
   return (
     <div>
-      <h2>Bottle Tracker {profileName ? `for ${profileName}` : '(Select Profile...)'}</h2>
+      <h2 className="tracker-title">Bottle Tracker {profileName ? `for ${profileName}` : '(Select Profile...)'}</h2>
 
       {}
       {formError && <p style={{ color: 'red' }}>Error: {formError}</p>}
@@ -139,7 +139,7 @@ const BottleTracker: React.FC = () => {
       {}
       {selectedProfile ? (
         <>
-          <section>
+          <section className="section-card">
             <h3>{editingEntryId ? 'Edit Bottle Feeding' : 'Add New Bottle Feeding'}</h3>
             <form onSubmit={handleSubmit}>
               <div>
@@ -190,7 +190,7 @@ const BottleTracker: React.FC = () => {
                   : 'Add Bottle Entry'}
               </button>
               {editingEntryId && (
-                <button type="button" onClick={resetForm} disabled={isSubmitting} style={{ marginLeft: 10 }}>
+                <button type="button" onClick={resetForm} disabled={isSubmitting} className="tracker-cancel-btn">
                   Cancel Edit
                 </button>
               )}
@@ -199,7 +199,7 @@ const BottleTracker: React.FC = () => {
 
           <hr />
 
-          <section>
+          <section className="section-card">
             <h3>Bottle Log {profileName ? `for ${profileName}` : ''}</h3>
             {}
             {isLoading && entries.length === 0 ? (
@@ -232,18 +232,11 @@ const BottleTracker: React.FC = () => {
                           Notes: {entry.notes}
                         </>
                       )}
-                      <div style={{ marginTop: 5 }}>
+                      <div className="tracker-log-actions">
                         <button
                           onClick={() => handleEditClick(entry)}
                           disabled={isLoading || isSubmitting || !!editingEntryId}
-                          style={{
-                            marginRight: 10,
-                            background: 'none',
-                            border: 'none',
-                            cursor: 'pointer',
-                            padding: '2px 5px',
-                            color: 'var(--primary-color)',
-                          }}
+                          className="tracker-action-btn tracker-edit-btn"
                           title="Edit entry"
                         >
                           Edit
@@ -251,14 +244,7 @@ const BottleTracker: React.FC = () => {
                         <button
                           onClick={() => handleDeleteEntry(entry.entryId)}
                           disabled={isLoading || isSubmitting || !!editingEntryId}
-                          style={{
-                            marginLeft: 10,
-                            color: 'red',
-                            background: 'none',
-                            border: 'none',
-                            cursor: 'pointer',
-                            padding: '2px 5px',
-                          }}
+                          className="tracker-action-btn tracker-delete-btn"
                           title="Delete entry"
                         >
                           Delete

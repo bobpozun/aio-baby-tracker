@@ -19,12 +19,7 @@ const EditProfileForm: React.FC<{
   return (
     <form
       onSubmit={handleSave}
-      style={{
-        border: '1px solid #eee',
-        padding: '10px',
-        marginTop: '5px',
-        borderRadius: '4px',
-      }}
+      className="section-card"
     >
       <h4>Edit Profile</h4>
       <div>

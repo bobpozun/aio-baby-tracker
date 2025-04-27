@@ -92,9 +92,13 @@ export function useTrackerLogic<T extends BaseTrackerEntry>({
       } else {
         setHasFetchedEmptyData(false);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(`Failed to fetch ${trackerType} entries:`, err);
-      setLocalError(err.message || `Failed to load ${trackerType} entries.`);
+      let errorMsg = 'Unknown error';
+if (err instanceof Error) errorMsg = err.message;
+else if (typeof err === 'string') errorMsg = err;
+else try { errorMsg = JSON.stringify(err); } catch {}
+setLocalError(errorMsg || `Failed to load ${trackerType} entries.`);
       setEntries([]);
       setHasFetchedEmptyData(false);
     } finally {
@@ -118,9 +122,13 @@ export function useTrackerLogic<T extends BaseTrackerEntry>({
       );
       console.log(`Deleted ${trackerType} entry ${entryId}`);
       
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(`Failed to delete ${trackerType} entry ${entryId}:`, err);
-      setLocalError(err.message || `Failed to delete ${trackerType} entry.`);
+      let errorMsg = 'Unknown error';
+if (err instanceof Error) errorMsg = err.message;
+else if (typeof err === 'string') errorMsg = err;
+else try { errorMsg = JSON.stringify(err); } catch {}
+setLocalError(errorMsg || `Failed to delete ${trackerType} entry.`);
       setEntries(originalEntries); 
     } finally {
         setIsLoadingEntries(false);

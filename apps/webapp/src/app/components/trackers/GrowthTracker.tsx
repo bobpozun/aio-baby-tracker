@@ -152,24 +152,22 @@ const GrowthTracker: React.FC = () => {
 
   
   if (displayError && !selectedProfile) {
-     return <div style={{ color: 'red' }}>Error loading profiles: {displayError}</div>;
+     return <div className="error-message">Error loading profiles: {displayError}</div>;
   }
 
   return (
-    <div>
-      <h2>
-        Growth Tracker {profileName ? `for ${profileName}` : '(Select Profile...)'}
-      </h2>
+    <div className="main-container">
+      <h2 className="tracker-title">Growth Tracker {profileName ? `for ${profileName}` : '(Select Profile...)'}</h2>
 
       {}
-      {formError && <p style={{ color: 'red' }}>Error: {formError}</p>}
+      {formError && <p className="error-message">Error: {formError}</p>}
       {}
-      {displayError && !formError && <p style={{ color: 'red' }}>Error: {displayError}</p>}
+      {displayError && !formError && <p className="error-message">Error: {displayError}</p>}
 
       {}
       {selectedProfile ? (
         <>
-          <section>
+          <section className="section-card">
             <h3>
               {editingEntryId
                 ? 'Edit Growth Measurement'
@@ -264,7 +262,7 @@ const GrowthTracker: React.FC = () => {
                   type="button"
                   onClick={resetForm}
                   disabled={isSubmitting}
-                  style={{ marginLeft: '10px' }}
+                  className="tracker-cancel-btn"
                 >
                   Cancel Edit
                 </button>
@@ -274,7 +272,7 @@ const GrowthTracker: React.FC = () => {
 
           <hr />
 
-          <section>
+          <section className="section-card">
             <h3>
               Growth Log {profileName ? `for ${profileName}` : ''}
             </h3>
@@ -319,18 +317,11 @@ const GrowthTracker: React.FC = () => {
                           <br />Notes: {entry.notes}
                         </>
                       )}
-                      <div style={{ marginTop: '5px' }}>
+                      <div className="tracker-log-actions">
                         <button
                           onClick={() => handleEditClick(entry)}
                           disabled={isLoading || isSubmitting || !!editingEntryId}
-                          style={{
-                            marginRight: '10px',
-                            background: 'none',
-                            border: 'none',
-                            cursor: 'pointer',
-                            padding: '2px 5px',
-                            color: 'var(--primary-color)',
-                          }}
+                          className="tracker-action-btn tracker-edit-btn"
                           title="Edit entry"
                         >
                           Edit
@@ -338,14 +329,7 @@ const GrowthTracker: React.FC = () => {
                         <button
                           onClick={() => handleDeleteEntry(entry.entryId)}
                           disabled={isLoading || isSubmitting || !!editingEntryId}
-                          style={{
-                            marginLeft: '10px',
-                            color: 'red',
-                            background: 'none',
-                            border: 'none',
-                            cursor: 'pointer',
-                            padding: '2px 5px',
-                          }}
+                          className="tracker-action-btn tracker-delete-btn"
                           title="Delete entry"
                         >
                           Delete

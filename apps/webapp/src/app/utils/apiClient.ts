@@ -18,8 +18,7 @@ async function getAuthToken() {
 
 interface ApiOptions {
   headers?: Record<string, string>;
-  body?: Record<string, any>;
-  
+  body?: unknown;
   queryParams?: Record<string, string>;
 }
 
@@ -35,15 +34,24 @@ async function makeApiRequest<T>(
     ...(authToken && { Authorization: `Bearer ${authToken}` }), 
   };
 
+  let processedBody = options?.body;
+  if ((method === 'post' || method === 'put') && options?.body && typeof options.body !== 'string' && !(options.body instanceof FormData)) {
+    processedBody = JSON.stringify(options.body);
+  }
+  const optionsObject: Record<string, any> = {
+    headers: headers,
+    ...(options?.queryParams && typeof options.queryParams === 'object' && options.queryParams !== null ? { queryParams: options.queryParams } : {}),
+  };
+  if ((method === 'post' || method === 'put') && processedBody) {
+    optionsObject.body = processedBody;
+  }
   const operationOptions = {
     apiName: apiName,
     path: path,
-    options: {
-      headers: headers,
-      ...(options?.body && { body: options.body }),
-      ...(options?.queryParams && { queryParams: options.queryParams }),
-    },
+    options: optionsObject,
   };
+
+
 
   console.log(
     `Making ${method.toUpperCase()} request to ${path}`,
@@ -101,7 +109,7 @@ async function makeApiRequest<T>(
       
       return {} as T; 
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error(`API Error (${method.toUpperCase()} ${path}):`, error);
     let errorMessage = 'An API error occurred';
 
@@ -131,18 +139,8 @@ export const apiClient = {
     queryParams?: Record<string, string>,
     headers?: Record<string, string>
   ) => makeApiRequest<T>('get', path, { queryParams, headers }),
-  post: <T>(
-    path: string,
-    body: Record<string, any>,
-    queryParams?: Record<string, string>,
-    headers?: Record<string, string>
-  ) => makeApiRequest<T>('post', path, { body, queryParams, headers }),
-  put: <T>(
-    path: string,
-    body: Record<string, any>,
-    queryParams?: Record<string, string>,
-    headers?: Record<string, string>
-  ) => makeApiRequest<T>('put', path, { body, queryParams, headers }),
+  post: <R>(url: string, data: unknown) => makeApiRequest<R>('post', url, { body: data }),
+  put: <R>(url: string, data: unknown) => makeApiRequest<R>('put', url, { body: data }),
   del: <T>(
     path: string,
     queryParams?: Record<string, string>,

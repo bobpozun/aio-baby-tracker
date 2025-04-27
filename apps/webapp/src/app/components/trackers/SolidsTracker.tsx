@@ -187,8 +187,12 @@ const SolidsTracker: React.FC = () => {
         await uploadData({ key: fileName, data: selectedFile });
         newImageKey = fileName;
         setImageKey(fileName);
-      } catch (uploadErr: any) {
-        setFormError(uploadErr.message || 'Failed to upload image.');
+      } catch (err: unknown) {
+        let errorMsg = 'Unknown error';
+        if (err instanceof Error) errorMsg = err.message;
+        else if (typeof err === 'string') errorMsg = err;
+        else try { errorMsg = JSON.stringify(err); } catch {}
+        setFormError(errorMsg || 'Failed to upload image.');
         setIsSubmitting(false);
         return;
       }
@@ -207,8 +211,12 @@ const SolidsTracker: React.FC = () => {
         resetForm,
         apiClient,
       }).handleSubmit(e);
-    } catch (err: any) {
-      setFormError(err?.message || 'Failed to submit entry.');
+    } catch (err: unknown) {
+    let errorMsg = 'Unknown error';
+    if (err instanceof Error) errorMsg = err.message;
+    else if (typeof err === 'string') errorMsg = err;
+    else try { errorMsg = JSON.stringify(err); } catch {}
+    setFormError(errorMsg || 'Failed to submit entry.');
     } finally {
       setIsSubmitting(false);
     }
@@ -224,7 +232,7 @@ const SolidsTracker: React.FC = () => {
 
   return (
     <div>
-      <h2>Solids Tracker {profileName ? `for ${profileName}` : '(Select Profile...)'}</h2>
+      <h2 className="tracker-title">Solids Tracker {profileName ? `for ${profileName}` : '(Select Profile...)'}</h2>
 
       {}
       {formError && <p style={{ color: 'red' }}>Error: {formError}</p>}
@@ -234,7 +242,7 @@ const SolidsTracker: React.FC = () => {
       {}
       {selectedProfile ? (
         <>
-          <section>
+          <section className="section-card">
             <h3>{editingEntryId ? 'Edit Solid Food Entry' : 'Add New Solid Food Entry'}</h3>
             <form onSubmit={handleSubmit}>
               <div>
@@ -275,7 +283,7 @@ const SolidsTracker: React.FC = () => {
                   onChange={handleFileChange}
                   style={{ display: 'block', marginTop: '5px' }}
                 />
-                {selectedFile && <p style={{ marginTop: '5px' }}>New file selected: {selectedFile.name}</p>}
+                {selectedFile && <p className="tracker-log-actions">New file selected: {selectedFile.name}</p>}
               </div>
               <div>
                 <label htmlFor="solidsNotes">Notes:</label>
@@ -291,7 +299,7 @@ const SolidsTracker: React.FC = () => {
                   : 'Add Solids Entry'}
               </button>
               {editingEntryId && (
-                <button type="button" onClick={resetForm} disabled={isSubmitting} style={{ marginLeft: '10px' }}>
+                <button type="button" onClick={resetForm} disabled={isSubmitting} className="tracker-cancel-btn">
                   Cancel Edit
                 </button>
               )}
@@ -300,7 +308,7 @@ const SolidsTracker: React.FC = () => {
 
           <hr />
 
-          <section>
+          <section className="section-card">
             <h3>Solids Log {profileName ? `for ${profileName}` : ''}</h3>
             {isLoading && entries.length === 0 ? (
               <p>Loading log...</p>
@@ -346,24 +354,20 @@ const SolidsTracker: React.FC = () => {
                         </>
                       )}
                       {entry.imageKey && (
-                        <div style={{ marginTop: '5px' }}>
-                          {logImageUrls[entry.entryId] ? (
-                            <img
-                              src={logImageUrls[entry.entryId]}
-                              alt={`Food entry ${entry.food}`}
-                              style={{
-                                maxWidth: '100px',
-                                maxHeight: '100px',
-                                display: 'block',
-                              }}
-                            />
-                          ) : (
-                            <span>[Loading image...]</span>
-                          )}
-                        </div>
-                      )}
-                      {/* Display edit and delete links */}
-                      <div style={{ marginTop: '5px' }}>
+  <div className="tracker-log-image">
+    {logImageUrls[entry.entryId] ? (
+      <img
+        src={logImageUrls[entry.entryId]}
+        alt={`Food entry ${entry.food}`}
+        className="tracker-log-image"
+      />
+    ) : (
+      <span>[Loading image...]</span>
+    )}
+  </div>
+)}
+                      
+                      <div className="tracker-log-actions">
                         <button
                           onClick={() => handleEditClick(entry)}
                           disabled={isLoading || isSubmitting || !!editingEntryId}

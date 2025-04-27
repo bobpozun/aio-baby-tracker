@@ -15,7 +15,7 @@ import {
 
 // Placeholder type for report data - replace with actual structure
 interface ReportData {
-  sleepSummary?: { totalHours: number; avgDuration: number; chartData?: any };
+  sleepSummary?: { totalHours: number; avgDuration: number; chartData?: unknown };
   nursingSummary?: {
     totalSessions: number;
     avgDuration?: number;
@@ -33,14 +33,14 @@ interface ReportData {
   bottleSummary?: {
     totalBottles: number;
     avgVolume?: number;
-    chartData?: any;
+    chartData?: unknown;
   };
-  diaperSummary?: { wetCount: number; dirtyCount: number; chartData?: any };
-  solidsSummary?: { totalFeedings: number; avgAmount?: number; chartData?: any };
-  medicineSummary?: { totalDoses: number; medicinesGiven: string[]; chartData?: any };
-  growthSummary?: { latestWeight?: number; latestHeight?: number; chartData?: any };
-  pottySummary?: { peeCount: number; poopCount: number; chartData?: any };
-  temperatureSummary?: { readingsCount: number; avgTemp?: number; chartData?: any };
+  diaperSummary?: { wetCount: number; dirtyCount: number; chartData?: unknown };
+  solidsSummary?: { totalFeedings: number; avgAmount?: number; chartData?: unknown };
+  medicineSummary?: { totalDoses: number; medicinesGiven: string[]; chartData?: unknown };
+  growthSummary?: { latestWeight?: number; latestHeight?: number; chartData?: unknown };
+  pottySummary?: { peeCount: number; poopCount: number; chartData?: unknown };
+  temperatureSummary?: { readingsCount: number; avgTemp?: number; chartData?: unknown };
 }
 
 // Normalize chart data to use startDateTime or createdAt for sorting and display
@@ -87,7 +87,7 @@ const ReportsDashboard: React.FC = () => {
     setError(null);
     try {
       
-      const queryParams: any = {
+      const queryParams: Record<string, string> = {
         profileId: selectedProfileId,
         trackers: selectedTrackers.join(','), 
         timeRange: timeRange,
@@ -99,9 +99,13 @@ const ReportsDashboard: React.FC = () => {
       const fetchedData = await apiClient.get<ReportData>('/reports', queryParams);
       setReportData(fetchedData);
       console.log('Fetched report data:', fetchedData);
-    } catch (err: any) {
-      console.error('Failed to fetch report data:', err);
-      setError(err.message || 'Failed to load report data.');
+    } catch (err: unknown) {
+      let errorMsg = 'Unknown error';
+      if (err instanceof Error) errorMsg = err.message;
+      else if (typeof err === 'string') errorMsg = err;
+      else try { errorMsg = JSON.stringify(err); } catch {}
+      console.error('Failed to fetch report data:', errorMsg);
+      setError(errorMsg || 'Failed to load report data.');
       setReportData(null);
     } finally {
       setIsLoading(false);
@@ -116,7 +120,7 @@ const ReportsDashboard: React.FC = () => {
   const noTrackersSelected = !selectedTrackers || selectedTrackers.length === 0;
 
   return (
-    <div>
+    <div className="main-container">
       <h2>Reports Dashboard</h2>
       <section>
         <p>View summaries and trends across your tracked data.</p>

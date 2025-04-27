@@ -89,9 +89,13 @@ export const ProfileProvider: React.FC<{ children: ReactNode }> = ({
       console.log('[ProfileContext fetchProfiles] Setting selectedProfileId state to:', newSelectedId);
       setSelectedProfileId(newSelectedId);
 
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('[ProfileContext fetchProfiles] Failed:', err);
-      setError(err.message || 'Failed to load profiles.');
+      let errorMsg = 'Unknown error';
+if (err instanceof Error) errorMsg = err.message;
+else if (typeof err === 'string') errorMsg = err;
+else try { errorMsg = JSON.stringify(err); } catch {}
+setError(errorMsg || 'Failed to load profiles.');
       setProfiles([]); 
       setSelectedProfileId(null); 
       localStorage.removeItem('selectedProfileId'); 
@@ -125,9 +129,13 @@ export const ProfileProvider: React.FC<{ children: ReactNode }> = ({
         await fetchProfiles();
         
         selectProfile(createdProfile.id); 
-      } catch (err: any) {
-        console.error('Failed to add profile:', err);
-        setError(err.message || 'Failed to add profile.');
+      } catch (err: unknown) {
+        let errorMsg = 'Unknown error';
+        if (err instanceof Error) errorMsg = err.message;
+        else if (typeof err === 'string') errorMsg = err;
+        else try { errorMsg = JSON.stringify(err); } catch {}
+        console.error('Failed to add profile:', errorMsg);
+        setError(errorMsg || 'Failed to add profile.');
         setIsLoading(false); 
       }
     },
@@ -154,9 +162,13 @@ export const ProfileProvider: React.FC<{ children: ReactNode }> = ({
         console.log(`Edited profile ${id} via API`);
         
         await fetchProfiles(); 
-      } catch (err: any) {
-        console.error(`Failed to edit profile ${id}:`, err);
-        setError(err.message || `Failed to edit profile ${name}.`);
+      } catch (err: unknown) {
+        let errorMsg = 'Unknown error';
+        if (err instanceof Error) errorMsg = err.message;
+        else if (typeof err === 'string') errorMsg = err;
+        else try { errorMsg = JSON.stringify(err); } catch {}
+        console.error(`Failed to edit profile ${id}:`, errorMsg);
+        setError(errorMsg || `Failed to edit profile ${name}.`);
         
         setProfiles(originalProfiles);
         setIsLoading(false); 
@@ -188,11 +200,15 @@ export const ProfileProvider: React.FC<{ children: ReactNode }> = ({
         console.log(`Deleted profile ${id} via API`);
         
         await fetchProfiles(); 
-      } catch (err: any) {
-        console.error(`Failed to delete profile ${id}:`, err);
+      } catch (err: unknown) {
+        let errorMsg = 'Unknown error';
+        if (err instanceof Error) errorMsg = err.message;
+        else if (typeof err === 'string') errorMsg = err;
+        else try { errorMsg = JSON.stringify(err); } catch {}
+        console.error(`Failed to delete profile ${id}:`, errorMsg);
         setError(
-          err.message ||
-            `Failed to delete profile ${profileToDelete?.name || id}.`
+          errorMsg ||
+            `Failed to delete profile "${profileToDelete?.name}". Try again.`
         );
         
         setProfiles(originalProfiles);

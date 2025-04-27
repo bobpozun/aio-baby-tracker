@@ -57,7 +57,7 @@ const PregnancyChecklist: React.FC = () => {
     try {
       
       const userStatuses = await apiClient.get<UserChecklistItemStatus[]>(
-        '\/checklist/status',
+        '/checklist/status',
         {
           profileId: selectedProfileId,
         }
@@ -75,7 +75,7 @@ const PregnancyChecklist: React.FC = () => {
 
       
       const customItems = await apiClient.get<DisplayChecklistItem[]>(
-        '\/checklist',
+        '/checklist',
         {
           profileId: selectedProfileId,
         }
@@ -88,9 +88,14 @@ const PregnancyChecklist: React.FC = () => {
       ];
 
       setItems(allItems);
-    } catch (err: any) {
-      console.error('Failed to fetch checklist status:', err);
-      setError(err.message || 'Failed to load checklist.');
+    } catch (err: unknown) {
+        let errorMsg = 'Unknown error';
+        if (err instanceof Error) errorMsg = err.message;
+        else if (typeof err === 'string') errorMsg = err;
+        else try { errorMsg = JSON.stringify(err); } catch {}
+
+      console.error('Failed to fetch checklist status:', errorMsg);
+      setError(errorMsg || 'Failed to load checklist.');
       setItems([]); 
     } finally {
       setIsLoading(false);
@@ -144,9 +149,14 @@ const PregnancyChecklist: React.FC = () => {
         console.log(
           `Toggled item ${itemId} for profile ${selectedProfileId} to ${newStatus}`
         );
-      } catch (err: any) {
-        console.error(`Failed to update checklist item ${itemId}:`, err);
-        setError(err.message || `Failed to update item status.`);
+      } catch (err: unknown) {
+        let errorMsg = 'Unknown error';
+        if (err instanceof Error) errorMsg = err.message;
+        else if (typeof err === 'string') errorMsg = err;
+        else try { errorMsg = JSON.stringify(err); } catch {}
+
+        console.error(`Failed to update checklist item ${itemId}:`, errorMsg);
+        setError(errorMsg || `Failed to update item status.`);
         
         setItems(originalItems);
       }
@@ -172,9 +182,8 @@ const PregnancyChecklist: React.FC = () => {
 
       try {
         // Call API to add custom todo (now POST /checklist/status)
-        
         const createdItem = await apiClient.post<DisplayChecklistItem>(
-          '\/checklist',
+          '/checklist',
           newItemData
         );
 
@@ -184,9 +193,14 @@ const PregnancyChecklist: React.FC = () => {
 
         console.log('Added custom todo:', createdItem);
         setNewTodoText(''); 
-      } catch (err: any) {
-        console.error('Failed to add custom todo:', err);
-        setError(err.message || 'Failed to add custom task.');
+      } catch (err: unknown) {
+        let errorMsg = 'Unknown error';
+        if (err instanceof Error) errorMsg = err.message;
+        else if (typeof err === 'string') errorMsg = err;
+        else try { errorMsg = JSON.stringify(err); } catch {}
+
+        console.error('Failed to add custom todo:', errorMsg);
+        setError(errorMsg || 'Failed to add custom task.');
       } finally {
         setIsLoading(false);
       }
@@ -195,22 +209,16 @@ const PregnancyChecklist: React.FC = () => {
   ); 
 
   return (
-    <div>
+    <div className="main-container">
       <h2>Pregnancy Checklist</h2>
       {error && (
-        <p style={{ color: 'red' }}>
+        <p className="text-danger mb-2">
           Error loading or updating checklist: {error}
         </p>
       )}
 
-      <section
-        style={{
-          marginBottom: '20px',
-          padding: '15px',
-          border: '1px solid var(--border-color)',
-          borderRadius: '5px',
-        }}
-      >
+      <section className="section-card">
+
         <h3 style={{ marginTop: '0' }}>Add Custom Task</h3>
         <form
           onSubmit={handleAddCustomTodo}

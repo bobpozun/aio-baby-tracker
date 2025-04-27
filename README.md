@@ -70,16 +70,19 @@ The following scripts are available in the root `package.json`:
 - `yarn repomix`: Packages the entire repo into one file for passing to an AI model
 - `yarn remove-comments`: Removes all comments from code files except those containing TODO, FIXME, or placeholder.
 - `yarn generate-demo-data`: Generates a year of demo tracker data for a user with 3 children (see below for setup and usage).
+- `yarn upload:pregnancy-guide-images`: Uploads all SVG and PNG images in the `pregnancy-guide-images/` folder to the `aio-pregnancy-guide-images` S3 bucket.
 
 ## Generating Demo Data
 
 You can generate a year of demo tracker data for a user (with 3 children of varying ages) using the provided script:
 
 1. **Configure environment variables:**
+
    - Copy `scripts/.env.example` to `scripts/.env` if you haven't already.
    - Fill in your EMAIL and PASSWORD for the demo user in `scripts/.env`. Optionally, set `API_URL` if you want to override the default backend URL.
 
 2. **Run the script:**
+
    - Using Yarn:
      ```bash
      yarn generate-demo-data
@@ -90,6 +93,34 @@ You can generate a year of demo tracker data for a user (with 3 children of vary
      ```
 
    The script will authenticate, create demo child profiles, and generate tracker entries for each child.
+
+---
+
+## Pregnancy Guide Images
+
+To update or upload the playful fruit/veggie images for the Pregnancy Week-by-Week Guide:
+
+1. **Place PNG images** (with transparent backgrounds, 256x256px recommended) in the `pregnancy-guide-images/` folder at the root of the repo. Name them to match the `babyImagePlaceholder` field in `apps/webapp/src/app/data/pregnancyGuideData.json` (e.g., `poppy_seed.png`, `leek.png`, `pumpkin.png`).
+2. **Upload images to S3** by running:
+   ```bash
+   yarn upload:pregnancy-guide-images
+   ```
+   This will upload all SVG and PNG images in the folder to the `aio-pregnancy-guide-images` S3 bucket.
+
+- The upload script requires AWS credentials with access to S3 in your deployment account/region.
+- Images will be publicly readable by default for easy loading in the UI.
+- The UI will attempt to load SVG images from S3 for each week in the pregnancy guide. If an SVG is not found, it will fall back to PNG.
+
+**Script location:** `scripts/upload-pregnancy-guide-images.ts`
+
+**Yarn script:** `yarn upload:pregnancy-guide-images`
+
+---
+
+### Pregnancy Guide Images in the UI
+
+- The week-by-week pregnancy guide will now display images directly from S3, using SVGs for the best quality where available.
+- To update or add images, simply add your SVG (or PNG) to the `pregnancy-guide-images/` folder and run the upload script again.
 
 ---
 

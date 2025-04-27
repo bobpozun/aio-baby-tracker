@@ -135,7 +135,7 @@ const NursingTracker: React.FC = () => {
   }
 
   return (
-    <div>
+    <div className="main-container">
       <h2>Nursing Tracker {profileName ? `for ${profileName}` : '(Select Profile...)'}</h2>
 
       {}

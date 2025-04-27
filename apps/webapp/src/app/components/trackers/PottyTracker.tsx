@@ -121,7 +121,7 @@ const PottyTracker: React.FC = () => {
 
   return (
     <div>
-      <h2>Potty Tracker {profileName ? `for ${profileName}` : '(Select Profile...)'}</h2>
+      <h2 className="tracker-title">Potty Tracker {profileName ? `for ${profileName}` : '(Select Profile...)'}</h2>
 
       {}
       {formError && <p style={{ color: 'red' }}>Error: {formError}</p>}
@@ -131,7 +131,7 @@ const PottyTracker: React.FC = () => {
       {}
       {selectedProfile ? (
         <>
-          <section>
+          <section className="section-card">
             <h3>{editingEntryId ? 'Edit Potty Event' : 'Add New Potty Event'}</h3>
             <form onSubmit={handleSubmit}>
               <div>
@@ -194,7 +194,7 @@ const PottyTracker: React.FC = () => {
                   : 'Add Potty Entry'}
               </button>
               {editingEntryId && (
-                <button type="button" onClick={resetForm} disabled={isSubmitting} style={{ marginLeft: '10px' }}>
+                <button type="button" onClick={resetForm} disabled={isSubmitting} className="tracker-cancel-btn">
                   Cancel Edit
                 </button>
               )}
@@ -203,7 +203,7 @@ const PottyTracker: React.FC = () => {
 
           <hr />
 
-          <section>
+          <section className="section-card">
             <h3>Potty Log {profileName ? `for ${profileName}` : ''}</h3>
             {}
             {isLoading && entries.length === 0 ? (
@@ -239,18 +239,11 @@ const PottyTracker: React.FC = () => {
       <strong>Notes:</strong> {entry.notes}
     </>
   )}
-  <div style={{ marginTop: '5px' }}>
+  <div className="tracker-log-actions">
     <button
       onClick={() => handleEditClick(entry)}
       disabled={isLoading || isSubmitting || !!editingEntryId}
-      style={{
-        marginRight: '10px',
-        background: 'none',
-        border: 'none',
-        cursor: 'pointer',
-        padding: '2px 5px',
-        color: 'var(--primary-color)',
-      }}
+      className="tracker-action-btn tracker-edit-btn"
       title="Edit entry"
     >
       Edit
@@ -258,14 +251,7 @@ const PottyTracker: React.FC = () => {
     <button
       onClick={() => handleDeleteEntry(entry.entryId)}
       disabled={isLoading || isSubmitting || !!editingEntryId}
-      style={{
-        marginLeft: '10px',
-        color: 'red',
-        background: 'none',
-        border: 'none',
-        cursor: 'pointer',
-        padding: '2px 5px',
-      }}
+      className="tracker-action-btn tracker-delete-btn"
       title="Delete entry"
     >
       Delete

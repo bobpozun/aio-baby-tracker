@@ -107,7 +107,9 @@ const TemperatureTracker: React.FC = () => {
     buildEntryData,
     validate,
     resetForm,
+    // apiClient is now typed to only accept (url, data), so we do not pass extra params.
     apiClient,
+    // Error handling is handled in the hook and component via formError/displayError, no direct err.message access.
   });
 
   
