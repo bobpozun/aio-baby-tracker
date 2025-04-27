@@ -23,12 +23,11 @@ jobs:
           cache: 'npm' # Cache npm dependencies
 
       - name: Install dependencies
-        run: npm ci # Use 'ci' for cleaner installs in CI
+        run: yarn install --frozen-lockfile
 
       - name: Build webapp
-        run: npx nx build webapp
+        run: yarn build:webapp
         env:
-          # Pass VITE variables needed for the build process
           AWS_COGNITO_REGION: ${{ secrets.AWS_COGNITO_REGION }}
           AWS_USER_POOLS_ID: ${{ secrets.AWS_USER_POOLS_ID }}
           AWS_USER_POOLS_WEB_CLIENT_ID: ${{ secrets.AWS_USER_POOLS_WEB_CLIENT_ID }}
@@ -36,7 +35,10 @@ jobs:
           API_AIOAPI_REGION: ${{ secrets.API_AIOAPI_REGION }}
           AWS_STORAGE_BUCKET: ${{ secrets.AWS_STORAGE_BUCKET }}
           AWS_STORAGE_REGION: ${{ secrets.AWS_STORAGE_REGION }}
-          # Add any other  variables your build needs
+          # Add any other variables your build needs
+
+      - name: List build output
+        run: ls -al ./dist/apps/webapp
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -48,7 +50,7 @@ jobs:
       - name: Deploy static site to S3 bucket
         run: aws s3 sync ./dist/apps/webapp/ s3://${{ secrets.S3_BUCKET_NAME }} --delete
         env:
-          # Ensure AWS CLI uses the region configured above if needed, though sync usually infers from bucket location
+          AWS_REGION: ${{ secrets.AWS_REGION }}
           AWS_REGION: ${{ secrets.AWS_REGION }}
 
       # Optional: Invalidate CloudFront cache
