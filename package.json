@@ -99,11 +99,11 @@
     "test": "nx run-many --target=test",
     "test:api": "jest --config ./api-tests/jest.config.js --rootDir ./api-tests --runInBand",
     "graph": "nx graph",
-    "mcp:start:browser-tools-server": "yarn @agentdeskai/browser-tools-server@latest",
-    "mcp:start:browser-tools-mcp": "yarn @agentdeskai/browser-tools-mcp@latest",
-    "repomix": "yarn repomix --remote https://github.com/bobpozun/aio-baby-tracker",
+    "mcp:start:browser-tools-server": "@agentdeskai/browser-tools-server@latest",
+    "mcp:start:browser-tools-mcp": "@agentdeskai/browser-tools-mcp@latest",
     "upload:pregnancy-guide-images": "tsx scripts/upload-pregnancy-guide-images.ts",
     "remove-comments": "node scripts/remove-comments.js",
-    "prettier": "yarn prettier --write . --ignore-path .gitignore"
+    "run:repomix": "repomix --remote https://github.com/bobpozun/aio-baby-tracker",
+    "run:prettier": "prettier --write . --ignore-path .gitignore"
   }
 }

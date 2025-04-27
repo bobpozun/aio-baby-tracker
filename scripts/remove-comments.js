@@ -8,15 +8,34 @@
 const fs = require('fs');
 const path = require('path');
 
-
-const CODE_EXTS = new Set(['.js', '.jsx', '.ts', '.tsx', '.py', '.java', '.go', '.c', '.cpp', '.h', '.cs', '.rs', '.rb', '.php', '.html', '.css', '.scss', '.sass']);
+const CODE_EXTS = new Set([
+  '.js',
+  '.jsx',
+  '.ts',
+  '.tsx',
+  '.py',
+  '.java',
+  '.go',
+  '.c',
+  '.cpp',
+  '.h',
+  '.cs',
+  '.rs',
+  '.rb',
+  '.php',
+  '.html',
+  '.css',
+  '.scss',
+  '.sass',
+]);
 
 function walk(dir) {
   const entries = fs.readdirSync(dir, { withFileTypes: true });
   for (const entry of entries) {
     const fullPath = path.join(dir, entry.name);
     if (entry.isDirectory()) {
-      if (['node_modules', '.git', 'dist', 'build', 'out'].includes(entry.name)) continue;
+      if (['node_modules', '.git', 'dist', 'build', 'out'].includes(entry.name))
+        continue;
       walk(fullPath);
     } else if (CODE_EXTS.has(path.extname(fullPath))) {
       processFile(fullPath);
@@ -28,43 +47,43 @@ function processFile(file) {
   const ext = path.extname(file);
   let content = fs.readFileSync(file, 'utf8');
 
-  if ([".js", ".jsx", ".ts", ".tsx"].includes(ext)) {
+  if (['.js', '.jsx', '.ts', '.tsx'].includes(ext)) {
     try {
-      const recast = require("recast");
-      const parser = require("@babel/parser");
+      const recast = require('recast');
+      const parser = require('@babel/parser');
       const ast = recast.parse(content, {
         parser: {
           parse(src) {
             return parser.parse(src, {
-              sourceType: "module",
+              sourceType: 'module',
               plugins: [
-                "jsx",
-                "typescript",
-                "classProperties",
-                "decorators-legacy",
-                "objectRestSpread",
-                "optionalChaining",
-                "nullishCoalescingOperator",
+                'jsx',
+                'typescript',
+                'classProperties',
+                'decorators-legacy',
+                'objectRestSpread',
+                'optionalChaining',
+                'nullishCoalescingOperator',
               ],
               allowReturnOutsideFunction: true,
               allowSuperOutsideMethod: true,
               tokens: true,
-              attachComment: true
+              attachComment: true,
             });
-          }
-        }
+          },
+        },
       });
       recast.visit(ast, {
         visitComment(path) {
-          const value = path.value.value || "";
+          const value = path.value.value || '';
           if (!/TODO|FIXME|placeholder/i.test(value)) {
             path.prune();
           }
           this.traverse(path);
-        }
+        },
       });
       content = recast.print(ast).code;
-      fs.writeFileSync(file, content, "utf8");
+      fs.writeFileSync(file, content, 'utf8');
       return;
     } catch (err) {}
   }
@@ -91,7 +110,7 @@ function processFile(file) {
       if (line.includes('*/')) {
         const comments = line.match(/\/\*[\s\S]*?\*\//g);
         if (comments) {
-          const keep = comments.some(c => /TODO|FIXME|placeholder/i.test(c));
+          const keep = comments.some((c) => /TODO|FIXME|placeholder/i.test(c));
           if (!keep) {
             line = line.replace(/\/\*[\s\S]*?\*\//g, '');
           }

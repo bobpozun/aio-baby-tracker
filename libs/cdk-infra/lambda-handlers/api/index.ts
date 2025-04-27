@@ -1,4 +1,8 @@
-import { Handler, APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
+import {
+  Handler,
+  APIGatewayProxyEvent,
+  APIGatewayProxyResult,
+} from 'aws-lambda';
 import {
   SleepEntry,
   NursingEntry,
@@ -9,8 +13,8 @@ import {
   GrowthEntry,
   PottyEntry,
   TemperatureEntry,
-  TrackerEntry
-} from "../../../../types/tracker-entry-types";
+  TrackerEntry,
+} from '../../../../types/tracker-entry-types';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import {
   DynamoDBDocumentClient,
@@ -33,13 +37,17 @@ console.log('ENV VAR - babiesTable:', babiesTable);
 console.log('ENV VAR - trackerEntriesTable:', trackerEntriesTable);
 console.log('ENV VAR - checklistStatusTable:', checklistStatusTable);
 
-const createApiResponse = (statusCode: number, body: any): APIGatewayProxyResult => {
+const createApiResponse = (
+  statusCode: number,
+  body: any
+): APIGatewayProxyResult => {
   return {
     statusCode: statusCode,
     headers: {
       'Content-Type': 'application/json',
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Headers': 'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token',
+      'Access-Control-Allow-Headers':
+        'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token',
       'Access-Control-Allow-Methods': 'OPTIONS,POST,GET,PUT,DELETE',
     },
     body: JSON.stringify(body),
@@ -50,28 +58,37 @@ function formatDateMMDDYYYY_HHMMSS(date: string | Date): string {
   const d = typeof date === 'string' ? new Date(date) : date;
   if (isNaN(d.getTime())) return '';
   const pad = (n: number) => n.toString().padStart(2, '0');
-  return `${pad(d.getMonth() + 1)}${pad(d.getDate())}${d.getFullYear()} ${pad(d.getHours())}:${pad(
-    d.getMinutes()
-  )}:${pad(d.getSeconds())}`;
+  return `${pad(d.getMonth() + 1)}${pad(d.getDate())}${d.getFullYear()} ${pad(
+    d.getHours()
+  )}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 }
 
 function extractAndFormatTime(entry: any): string {
   // Always prefer startDateTime, then createdAt
-  const raw = entry.startDateTime || entry.createdAt || entry.startTime || entry.date;
+  const raw =
+    entry.startDateTime || entry.createdAt || entry.startTime || entry.date;
   if (!raw) return '';
   const d = new Date(raw);
   return formatDateMMDDYYYY_HHMMSS(d);
 }
 
-export const handler: Handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
+export const handler: Handler = async (
+  event: APIGatewayProxyEvent
+): Promise<APIGatewayProxyResult> => {
   if (event.httpMethod === 'OPTIONS') {
     return createApiResponse(200, {});
   }
   console.log('EVENT:', JSON.stringify(event, null, 2));
 
-  console.log('DEBUG: event.requestContext:', JSON.stringify(event.requestContext, null, 2));
+  console.log(
+    'DEBUG: event.requestContext:',
+    JSON.stringify(event.requestContext, null, 2)
+  );
   if (event.requestContext && event.requestContext.authorizer) {
-    console.log('DEBUG: event.requestContext.authorizer:', JSON.stringify(event.requestContext.authorizer, null, 2));
+    console.log(
+      'DEBUG: event.requestContext.authorizer:',
+      JSON.stringify(event.requestContext.authorizer, null, 2)
+    );
   } else {
     console.log('DEBUG: event.requestContext.authorizer is missing');
   }
@@ -87,11 +104,19 @@ export const handler: Handler = async (event: APIGatewayProxyEvent): Promise<API
   if (normalizedPath.length > 1 && normalizedPath.endsWith('/')) {
     normalizedPath = normalizedPath.slice(0, -1);
   }
-  console.log('DEBUG: normalizedPath:', normalizedPath, 'httpMethod:', httpMethod);
+  console.log(
+    'DEBUG: normalizedPath:',
+    normalizedPath,
+    'httpMethod:',
+    httpMethod
+  );
   const pathParameters = event.pathParameters;
   const body = event.body ? JSON.parse(event.body) : null;
 
-  console.log('DEBUG: authorizer.claims:', JSON.stringify(event.requestContext.authorizer?.claims, null, 2));
+  console.log(
+    'DEBUG: authorizer.claims:',
+    JSON.stringify(event.requestContext.authorizer?.claims, null, 2)
+  );
   const userId = event.requestContext.authorizer?.claims?.sub;
 
   const debugPath = event.resource || event.path;
@@ -116,7 +141,9 @@ export const handler: Handler = async (event: APIGatewayProxyEvent): Promise<API
   console.log(`Authenticated User ID (sub): ${userId}`);
 
   if (!babiesTable || !trackerEntriesTable || !checklistStatusTable) {
-    console.error('CRITICAL: One or more DynamoDB table names are missing from environment variables!');
+    console.error(
+      'CRITICAL: One or more DynamoDB table names are missing from environment variables!'
+    );
     return createApiResponse(500, {
       message: 'Internal Server Error: Configuration missing.',
     });
@@ -164,7 +191,10 @@ export const handler: Handler = async (event: APIGatewayProxyEvent): Promise<API
         name: newItem.name,
         birthday: newItem.birthday,
       });
-    } else if (normalizedPath === '/profiles/{profileId}' && httpMethod === 'PUT') {
+    } else if (
+      normalizedPath === '/profiles/{profileId}' &&
+      httpMethod === 'PUT'
+    ) {
       const profileId = pathParameters?.profileId;
       console.log(`ROUTE: PUT /profiles/${profileId} for user ${userId}`);
       if (!profileId || !body || !body.name || !body.birthday) {
@@ -187,7 +217,10 @@ export const handler: Handler = async (event: APIGatewayProxyEvent): Promise<API
       const result = await docClient.send(command);
 
       return createApiResponse(200, { id: profileId, ...result.Attributes });
-    } else if (normalizedPath === '/profiles/{profileId}' && httpMethod === 'DELETE') {
+    } else if (
+      normalizedPath === '/profiles/{profileId}' &&
+      httpMethod === 'DELETE'
+    ) {
       const profileId = pathParameters?.profileId;
       if (!profileId) {
         return createApiResponse(400, { message: 'Missing profileId' });
@@ -204,7 +237,9 @@ export const handler: Handler = async (event: APIGatewayProxyEvent): Promise<API
           })
         );
         trackerEntries = queryResult.Items || [];
-        console.log(`Found ${trackerEntries.length} tracker entries for profile ${profileId}`);
+        console.log(
+          `Found ${trackerEntries.length} tracker entries for profile ${profileId}`
+        );
       } catch (err) {
         console.error('Error querying tracker entries for profile:', err);
         return createApiResponse(500, {
@@ -228,11 +263,16 @@ export const handler: Handler = async (event: APIGatewayProxyEvent): Promise<API
         try {
           const { BatchWriteCommand } = require('@aws-sdk/lib-dynamodb');
           await docClient.send(new BatchWriteCommand(batchParams));
-          console.log(`Deleted batch of ${deleteRequests.length} tracker entries for profile ${profileId}`);
+          console.log(
+            `Deleted batch of ${deleteRequests.length} tracker entries for profile ${profileId}`
+          );
         } catch (err) {
           try {
             console.error('Error deleting tracker entries batch:', err);
-            console.error('Full error object:', JSON.stringify(err, Object.getOwnPropertyNames(err), 2));
+            console.error(
+              'Full error object:',
+              JSON.stringify(err, Object.getOwnPropertyNames(err), 2)
+            );
           } catch (logErr) {
             console.error('Error stringifying error:', logErr);
             console.error('Raw error:', err);
@@ -250,7 +290,10 @@ export const handler: Handler = async (event: APIGatewayProxyEvent): Promise<API
       return createApiResponse(200, {
         message: `Profile ${profileId} and all related tracker entries deleted successfully`,
       });
-    } else if (normalizedPath === '/profiles/{profileId}/trackers/{trackerType}' && httpMethod === 'GET') {
+    } else if (
+      normalizedPath === '/profiles/{profileId}/trackers/{trackerType}' &&
+      httpMethod === 'GET'
+    ) {
       const babyId = pathParameters?.profileId;
       const trackerType = pathParameters?.trackerType;
       console.log(`ROUTE: GET /profiles/${babyId}/trackers/${trackerType}`);
@@ -267,14 +310,19 @@ export const handler: Handler = async (event: APIGatewayProxyEvent): Promise<API
         });
         const profileResult = await docClient.send(getProfileCommand);
         if (!profileResult.Item) {
-          console.warn(`User ${userId} does not own profile ${babyId} or it does not exist.`);
+          console.warn(
+            `User ${userId} does not own profile ${babyId} or it does not exist.`
+          );
           return createApiResponse(404, {
             message: 'Profile not found or access denied.',
           });
         }
         console.log(`User ${userId} verified ownership of profile ${babyId}.`);
       } catch (verifyError: any) {
-        console.error(`Error verifying profile ownership for ${babyId}:`, verifyError);
+        console.error(
+          `Error verifying profile ownership for ${babyId}:`,
+          verifyError
+        );
         return createApiResponse(500, {
           message: 'Internal Server Error during ownership verification.',
         });
@@ -295,7 +343,10 @@ export const handler: Handler = async (event: APIGatewayProxyEvent): Promise<API
         return entry;
       });
       return createApiResponse(200, items);
-    } else if (normalizedPath === '/profiles/{profileId}/trackers/{trackerType}' && httpMethod === 'POST') {
+    } else if (
+      normalizedPath === '/profiles/{profileId}/trackers/{trackerType}' &&
+      httpMethod === 'POST'
+    ) {
       const babyId = pathParameters?.profileId;
       const trackerType = pathParameters?.trackerType;
       console.log(`ROUTE: POST /profiles/${babyId}/trackers/${trackerType}`);
@@ -305,7 +356,10 @@ export const handler: Handler = async (event: APIGatewayProxyEvent): Promise<API
         });
       }
 
-      const entryId = `${trackerType}_${Date.now()}_${randomUUID().substring(0, 8)}`;
+      const entryId = `${trackerType}_${Date.now()}_${randomUUID().substring(
+        0,
+        8
+      )}`;
       const newItem = {
         babyId: babyId,
         entryId: entryId,
@@ -319,11 +373,17 @@ export const handler: Handler = async (event: APIGatewayProxyEvent): Promise<API
       });
       await docClient.send(command);
       return createApiResponse(201, newItem);
-    } else if (normalizedPath === '/profiles/{profileId}/trackers/{trackerType}/{entryId}' && httpMethod === 'DELETE') {
+    } else if (
+      normalizedPath ===
+        '/profiles/{profileId}/trackers/{trackerType}/{entryId}' &&
+      httpMethod === 'DELETE'
+    ) {
       const babyId = pathParameters?.profileId;
       const trackerType = pathParameters?.trackerType;
       const entryId = pathParameters?.entryId;
-      console.log(`ROUTE: DELETE /profiles/${babyId}/trackers/${trackerType}/${entryId}`);
+      console.log(
+        `ROUTE: DELETE /profiles/${babyId}/trackers/${trackerType}/${entryId}`
+      );
 
       if (!babyId || !trackerType || !entryId) {
         return createApiResponse(400, { message: 'Missing parameters' });
@@ -336,14 +396,19 @@ export const handler: Handler = async (event: APIGatewayProxyEvent): Promise<API
         });
         const profileResult = await docClient.send(getProfileCommand);
         if (!profileResult.Item) {
-          console.warn(`User ${userId} does not own profile ${babyId} or it does not exist.`);
+          console.warn(
+            `User ${userId} does not own profile ${babyId} or it does not exist.`
+          );
           return createApiResponse(404, {
             message: 'Profile not found or access denied.',
           });
         }
         console.log(`User ${userId} verified ownership of profile ${babyId}.`);
       } catch (verifyError: any) {
-        console.error(`Error verifying profile ownership for ${babyId}:`, verifyError);
+        console.error(
+          `Error verifying profile ownership for ${babyId}:`,
+          verifyError
+        );
         return createApiResponse(500, {
           message: 'Internal Server Error during ownership verification.',
         });
@@ -355,12 +420,16 @@ export const handler: Handler = async (event: APIGatewayProxyEvent): Promise<API
       });
       await docClient.send(command);
       return createApiResponse(200, { message: 'Tracker entry deleted' });
-    } else if (normalizedPath === '/profiles/{profileId}/reports' && httpMethod === 'GET') {
+    } else if (
+      normalizedPath === '/profiles/{profileId}/reports' &&
+      httpMethod === 'GET'
+    ) {
       const { trackers, timeRange } = event.queryStringParameters || {};
       const babyId = pathParameters?.profileId;
       if (!babyId || !trackers || !timeRange) {
         return createApiResponse(400, {
-          message: 'Missing required parameters: profileId (in path), trackers, or timeRange',
+          message:
+            'Missing required parameters: profileId (in path), trackers, or timeRange',
         });
       }
 
@@ -393,46 +462,72 @@ export const handler: Handler = async (event: APIGatewayProxyEvent): Promise<API
       const allEntries = (result.Items || []).filter((entry: any) => {
         if (!trackersArr.includes(entry.trackerType)) return false;
 
-        const entryDateStr = entry.startDateTime || entry.createdAt || entry.startTime;
+        const entryDateStr =
+          entry.startDateTime || entry.createdAt || entry.startTime;
         if (!entryDateStr) return false;
         const entryTime = new Date(entryDateStr);
         return entryTime >= fromDate && entryTime <= now;
       });
-      console.log('DEBUG: allEntries after filter:', JSON.stringify(allEntries, null, 2));
+      console.log(
+        'DEBUG: allEntries after filter:',
+        JSON.stringify(allEntries, null, 2)
+      );
 
       const report: any = {};
       for (const tracker of trackersArr) {
-        const entries = allEntries.filter((e: any) => e.trackerType === tracker);
-        console.log(`DEBUG: entries for tracker ${tracker}:`, JSON.stringify(entries, null, 2));
+        const entries = allEntries.filter(
+          (e: any) => e.trackerType === tracker
+        );
+        console.log(
+          `DEBUG: entries for tracker ${tracker}:`,
+          JSON.stringify(entries, null, 2)
+        );
         if (tracker === 'sleep') {
           const getDurationHours = (e: any) => {
             const start = e.startDateTime ? new Date(e.startDateTime) : null;
             const end = e.endDateTime ? new Date(e.endDateTime) : null;
-            if (start && end && !isNaN(start.getTime()) && !isNaN(end.getTime())) {
+            if (
+              start &&
+              end &&
+              !isNaN(start.getTime()) &&
+              !isNaN(end.getTime())
+            ) {
               return (end.getTime() - start.getTime()) / (1000 * 60 * 60);
             }
             return 0;
           };
-          const totalHours = entries.reduce((sum: number, e: any) => sum + getDurationHours(e), 0);
+          const totalHours = entries.reduce(
+            (sum: number, e: any) => sum + getDurationHours(e),
+            0
+          );
           const avgDuration = entries.length ? totalHours / entries.length : 0;
           const chartData = entries.map((e: any) => ({
             date: e.startDateTime || e.createdAt || e.startTime,
             startDateTime: e.startDateTime || e.createdAt || e.startTime,
             endDateTime: e.endDateTime,
-            hours: getDurationHours(e) !== undefined && getDurationHours(e) !== null ? Number(getDurationHours(e)) : null,
+            hours:
+              getDurationHours(e) !== undefined && getDurationHours(e) !== null
+                ? Number(getDurationHours(e))
+                : null,
           }));
           report.sleepSummary = {
             totalHours: Number(totalHours),
             avgDuration: Number(avgDuration),
-            chartData
+            chartData,
           };
         } else if (tracker === 'nursing') {
           const totalSessions = entries.length;
           const avgDuration = entries.length
-            ? entries.reduce((sum: number, e: any) => sum + (e.duration || 0), 0) / entries.length
+            ? entries.reduce(
+                (sum: number, e: any) => sum + (e.duration || 0),
+                0
+              ) / entries.length
             : 0;
           const avgVolume = entries.length
-            ? entries.reduce((sum: number, e: any) => sum + (e.volume || 0), 0) / entries.length
+            ? entries.reduce(
+                (sum: number, e: any) => sum + (e.volume || 0),
+                0
+              ) / entries.length
             : 0;
           const chartData = entries
             .filter((e: any) => e.side === 'left' || e.side === 'right')
@@ -440,33 +535,51 @@ export const handler: Handler = async (event: APIGatewayProxyEvent): Promise<API
               date: e.startDateTime || e.createdAt,
               startDateTime: e.startDateTime || e.createdAt || e.startTime,
               side: e.side,
-              duration: e.duration !== undefined && e.duration !== null ? Number(e.duration) : 0,
-              volume: e.volume !== undefined && e.volume !== null ? Number(e.volume) : null,
+              duration:
+                e.duration !== undefined && e.duration !== null
+                  ? Number(e.duration)
+                  : 0,
+              volume:
+                e.volume !== undefined && e.volume !== null
+                  ? Number(e.volume)
+                  : null,
             }));
           report.nursingSummary = {
             totalSessions,
             avgDuration: Number(avgDuration),
             avgVolume: Number(avgVolume),
-            chartData
+            chartData,
           };
         } else if (tracker === 'bottle') {
           const totalBottles = entries.length;
           const avgVolume = entries.length
-            ? entries.reduce((sum: number, e: any) => sum + (e.volume || 0), 0) / entries.length
+            ? entries.reduce(
+                (sum: number, e: any) => sum + (e.volume || 0),
+                0
+              ) / entries.length
             : 0;
           const chartData = entries.map((e: any) => ({
             date: e.startDateTime || e.createdAt,
             startDateTime: e.startDateTime || e.createdAt || e.startTime,
-            volume: e.volume !== undefined && e.volume !== null ? Number(e.volume) : (e.amount !== undefined && e.amount !== null ? Number(e.amount) : null),
+            volume:
+              e.volume !== undefined && e.volume !== null
+                ? Number(e.volume)
+                : e.amount !== undefined && e.amount !== null
+                ? Number(e.amount)
+                : null,
           }));
           report.bottleSummary = {
             totalBottles,
             avgVolume: Number(avgVolume),
-            chartData
+            chartData,
           };
         } else if (tracker === 'diaper') {
-          const wetCount = entries.filter((e: any) => e.type === 'wet' || e.type === 'mixed').length;
-          const dirtyCount = entries.filter((e: any) => e.type === 'dirty' || e.type === 'mixed').length;
+          const wetCount = entries.filter(
+            (e: any) => e.type === 'wet' || e.type === 'mixed'
+          ).length;
+          const dirtyCount = entries.filter(
+            (e: any) => e.type === 'dirty' || e.type === 'mixed'
+          ).length;
           const chartData = entries.map((e: any) => ({
             date: e.startDateTime || e.createdAt,
             startDateTime: e.startDateTime || e.createdAt || e.startTime,
@@ -476,58 +589,88 @@ export const handler: Handler = async (event: APIGatewayProxyEvent): Promise<API
           report.diaperSummary = {
             wetCount,
             dirtyCount,
-            chartData
+            chartData,
           };
         } else if (tracker === 'solids') {
           const totalFeedings = entries.length;
           const avgAmount = entries.length
-            ? entries.reduce((sum: number, e: any) => sum + (e.amount || 0), 0) / entries.length
+            ? entries.reduce(
+                (sum: number, e: any) => sum + (e.amount || 0),
+                0
+              ) / entries.length
             : 0;
           const chartData = entries.map((e: any) => ({
             date: e.startDateTime || e.createdAt,
             startDateTime: e.startDateTime || e.createdAt || e.startTime,
-            amount: e.amount !== undefined && e.amount !== null ? Number(e.amount) : null,
-            volume: e.amount !== undefined && e.amount !== null ? Number(e.amount) : null,
+            amount:
+              e.amount !== undefined && e.amount !== null
+                ? Number(e.amount)
+                : null,
+            volume:
+              e.amount !== undefined && e.amount !== null
+                ? Number(e.amount)
+                : null,
           }));
           report.solidsSummary = {
             totalFeedings,
             avgAmount: Number(avgAmount).toFixed(2),
-            chartData
+            chartData,
           };
         } else if (tracker === 'medicine') {
           const totalDoses = entries.length;
-          const medicinesGiven = Array.from(new Set(entries.map((e: any) => e.medicineName).filter(Boolean)));
+          const medicinesGiven = Array.from(
+            new Set(entries.map((e: any) => e.medicineName).filter(Boolean))
+          );
           const chartData = entries.map((e: any) => ({
             date: e.startDateTime || e.createdAt,
             startDateTime: e.startDateTime || e.createdAt || e.startTime,
             medicineName: e.medicineName ?? null,
-            doses: e.doses !== undefined && e.doses !== null ? Number(e.doses) : 1,
+            doses:
+              e.doses !== undefined && e.doses !== null ? Number(e.doses) : 1,
           }));
           report.medicineSummary = {
             totalDoses,
             medicinesGiven,
-            chartData
+            chartData,
           };
         } else if (tracker === 'growth') {
           const latestEntry = entries.reduce((latest: any, e: any) => {
-            const latestDate = latest ? new Date(latest.startDateTime || latest.createdAt) : null;
+            const latestDate = latest
+              ? new Date(latest.startDateTime || latest.createdAt)
+              : null;
             const eDate = new Date(e.startDateTime || e.createdAt);
             return !latestDate || eDate > latestDate ? e : latest;
           }, null);
           const chartData = entries.map((e: any) => ({
             date: e.startDateTime || e.createdAt,
             startDateTime: e.startDateTime || e.createdAt || e.startTime,
-            weight: e.weight !== undefined && e.weight !== null ? Number(e.weight) : null,
-            height: e.height !== undefined && e.height !== null ? Number(e.height) : null,
+            weight:
+              e.weight !== undefined && e.weight !== null
+                ? Number(e.weight)
+                : null,
+            height:
+              e.height !== undefined && e.height !== null
+                ? Number(e.height)
+                : null,
           }));
           report.growthSummary = {
-            latestWeight: latestEntry?.weight !== undefined && latestEntry?.weight !== null ? Number(latestEntry.weight).toFixed(2) : null,
-            latestHeight: latestEntry?.height !== undefined && latestEntry?.height !== null ? Number(latestEntry.height).toFixed(2) : null,
-            chartData
+            latestWeight:
+              latestEntry?.weight !== undefined && latestEntry?.weight !== null
+                ? Number(latestEntry.weight).toFixed(2)
+                : null,
+            latestHeight:
+              latestEntry?.height !== undefined && latestEntry?.height !== null
+                ? Number(latestEntry.height).toFixed(2)
+                : null,
+            chartData,
           };
         } else if (tracker === 'potty') {
-          const peeCount = entries.filter((e: any) => e.type === 'pee' || e.type === 'both').length;
-          const poopCount = entries.filter((e: any) => e.type === 'poop' || e.type === 'both').length;
+          const peeCount = entries.filter(
+            (e: any) => e.type === 'pee' || e.type === 'both'
+          ).length;
+          const poopCount = entries.filter(
+            (e: any) => e.type === 'poop' || e.type === 'both'
+          ).length;
           const chartData = entries.map((e: any) => ({
             date: e.startDateTime || e.createdAt,
             startDateTime: e.startDateTime || e.createdAt || e.startTime,
@@ -537,21 +680,28 @@ export const handler: Handler = async (event: APIGatewayProxyEvent): Promise<API
           report.pottySummary = {
             peeCount,
             poopCount,
-            chartData
+            chartData,
           };
         } else if (tracker === 'temperature') {
           const validEntries = entries.filter((e: any) => e.temperature);
           const readingsCount = validEntries.length;
-          const avgTemp = validEntries.reduce((sum: number, e: any) => sum + e.temperature, 0) / readingsCount;
+          const avgTemp =
+            validEntries.reduce(
+              (sum: number, e: any) => sum + e.temperature,
+              0
+            ) / readingsCount;
           const chartData = validEntries.map((e: any) => ({
             date: e.startDateTime || e.createdAt || e.startTime,
             startDateTime: e.startDateTime || e.createdAt || e.startTime,
-            temperature: e.temperature !== undefined && e.temperature !== null ? Number(e.temperature) : null,
+            temperature:
+              e.temperature !== undefined && e.temperature !== null
+                ? Number(e.temperature)
+                : null,
           }));
           report.temperatureSummary = {
             readingsCount,
             avgTemp: Number(avgTemp).toFixed(2),
-            chartData
+            chartData,
           };
         }
       }
@@ -583,19 +733,25 @@ export const handler: Handler = async (event: APIGatewayProxyEvent): Promise<API
           startDateTime: entry.startDateTime,
           startTime: entry.startTime,
         }));
-      notesEntries.sort((a: any, b: any) => new Date(b.time).getTime() - new Date(a.time).getTime());
+      notesEntries.sort(
+        (a: any, b: any) =>
+          new Date(b.time).getTime() - new Date(a.time).getTime()
+      );
       return createApiResponse(200, notesEntries);
     } else if (normalizedPath === '/checklist' && httpMethod === 'GET') {
       // GET all custom checklist items for a user and profile
       // Table schema: partitionKey = userId, sortKey = itemId
       const { profileId } = event.queryStringParameters || {};
       if (!profileId) {
-        return createApiResponse(400, { message: 'Missing required query parameter: profileId' });
+        return createApiResponse(400, {
+          message: 'Missing required query parameter: profileId',
+        });
       }
       // Query for all custom items for this user (itemId starts with 'custom_'), filter by profileId
       const command = new QueryCommand({
         TableName: checklistStatusTable,
-        KeyConditionExpression: 'userId = :uid AND begins_with(itemId, :custom)',
+        KeyConditionExpression:
+          'userId = :uid AND begins_with(itemId, :custom)',
         FilterExpression: 'profileId = :pid', // Only non-key attribute in FilterExpression
         ExpressionAttributeValues: {
           ':uid': userId,
@@ -618,7 +774,9 @@ export const handler: Handler = async (event: APIGatewayProxyEvent): Promise<API
       // GET all checklist item statuses for a user and profile
       const { profileId } = event.queryStringParameters || {};
       if (!profileId) {
-        return createApiResponse(400, { message: 'Missing required query parameter: profileId' });
+        return createApiResponse(400, {
+          message: 'Missing required query parameter: profileId',
+        });
       }
       // Query all checklist items for this user/profile
       const command = new QueryCommand({
@@ -644,12 +802,20 @@ export const handler: Handler = async (event: APIGatewayProxyEvent): Promise<API
     } else if (normalizedPath === '/checklist' && httpMethod === 'POST') {
       // Add a custom checklist item
       console.log(`ROUTE: POST /checklist for user ${userId}`);
-      if (!body || !body.text || typeof body.week !== 'number' || !body.profileId) {
+      if (
+        !body ||
+        !body.text ||
+        typeof body.week !== 'number' ||
+        !body.profileId
+      ) {
         return createApiResponse(400, {
           message: 'Missing required fields: text, week, profileId',
         });
       }
-      const checklistItemId = `custom_${Date.now()}_${randomUUID().substring(0, 8)}`;
+      const checklistItemId = `custom_${Date.now()}_${randomUUID().substring(
+        0,
+        8
+      )}`;
       const checklistItem = {
         userId: userId,
         itemId: checklistItemId,
@@ -665,13 +831,23 @@ export const handler: Handler = async (event: APIGatewayProxyEvent): Promise<API
       });
       await docClient.send(command);
       return createApiResponse(201, checklistItem);
-    } else if (normalizedPath === '/checklist/status/{itemId}' && httpMethod === 'PUT') {
+    } else if (
+      normalizedPath === '/checklist/status/{itemId}' &&
+      httpMethod === 'PUT'
+    ) {
       // Update completion status for a checklist item
       const checklistItemId = pathParameters?.itemId;
-      console.log(`ROUTE: PUT /checklist/status/${checklistItemId} for user ${userId}`);
-      if (!checklistItemId || body === null || typeof body.completed !== 'boolean') {
+      console.log(
+        `ROUTE: PUT /checklist/status/${checklistItemId} for user ${userId}`
+      );
+      if (
+        !checklistItemId ||
+        body === null ||
+        typeof body.completed !== 'boolean'
+      ) {
         return createApiResponse(400, {
-          message: 'Missing itemId or invalid body (expected { completed: boolean })',
+          message:
+            'Missing itemId or invalid body (expected { completed: boolean })',
         });
       }
       const command = new UpdateCommand({

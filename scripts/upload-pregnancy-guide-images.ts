@@ -23,7 +23,9 @@ async function uploadImage(file: string) {
 }
 
 async function main() {
-  const files = fs.readdirSync(IMAGE_DIR).filter(f => f.endsWith('.svg') || f.endsWith('.png'));
+  const files = fs
+    .readdirSync(IMAGE_DIR)
+    .filter((f) => f.endsWith('.svg') || f.endsWith('.png'));
   if (files.length === 0) {
     console.log('No SVG or PNG images found to upload.');
     return;
@@ -34,7 +36,7 @@ async function main() {
   console.log('All images uploaded.');
 }
 
-main().catch(e => {
+main().catch((e) => {
   console.error(e);
   process.exit(1);
 });
