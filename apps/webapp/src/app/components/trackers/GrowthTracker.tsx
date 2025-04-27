@@ -3,10 +3,7 @@ import { apiClient } from '../../utils/apiClient';
 import { useTrackerLogic } from '../../hooks/useTrackerLogic';
 import { useTrackerForm } from '../../hooks/useTrackerForm';
 
-import {
-  getCurrentDateLocal, 
-} from '../../utils/dateUtils';
-
+import { getCurrentDateLocal } from '../../utils/dateUtils';
 
 interface GrowthEntry {
   entryId: string;
@@ -21,25 +18,22 @@ interface GrowthEntry {
   babyId: string;
 }
 
-
 type NewGrowthEntryData = Omit<GrowthEntry, 'entryId' | 'babyId'>;
 
 const GrowthTracker: React.FC = () => {
-  
   const {
     entries,
-    isLoading, 
-    error: displayError, 
+    isLoading,
+    error: displayError,
     editingEntryId,
     setEditingEntryId,
-    selectedProfile, 
+    selectedProfile,
     profileName,
-    fetchEntries, 
-    handleDeleteEntry, 
+    fetchEntries,
+    handleDeleteEntry,
     hasFetchedEmptyData,
   } = useTrackerLogic<GrowthEntry>({ trackerType: 'growth' });
 
-  
   const [createdAt, setCreatedAt] = useState(() => {
     const now = new Date();
     now.setSeconds(0, 0);
@@ -54,9 +48,7 @@ const GrowthTracker: React.FC = () => {
     'cm' | 'in'
   >('cm');
   const [notes, setNotes] = useState('');
-  
 
-  
   const resetForm = useCallback(() => {
     console.log('GrowthTracker: resetForm called');
     setCreatedAt(getCurrentDateLocal());
@@ -67,33 +59,36 @@ const GrowthTracker: React.FC = () => {
     setHeadCircumference('');
     setHeadCircumferenceUnit('cm');
     setNotes('');
-    setEditingEntryId(null); 
+    setEditingEntryId(null);
     setFormError(null);
   }, [setEditingEntryId]);
 
-  
-   useEffect(() => {
+  useEffect(() => {
     if (!isLoading && selectedProfile) {
-        resetForm();
+      resetForm();
     }
-     if (!isLoading && !selectedProfile) {
-        resetForm();
+    if (!isLoading && !selectedProfile) {
+      resetForm();
     }
   }, [entries, isLoading]);
 
-   
-   useEffect(() => {
-    if (selectedProfile && !isLoading && entries.length === 0 && !hasFetchedEmptyData) {
-      console.log(`GrowthTracker: Fetching entries for profile ${selectedProfile.id}`);
+  useEffect(() => {
+    if (
+      selectedProfile &&
+      !isLoading &&
+      entries.length === 0 &&
+      !hasFetchedEmptyData
+    ) {
+      console.log(
+        `GrowthTracker: Fetching entries for profile ${selectedProfile.id}`
+      );
       fetchEntries();
     }
   }, [selectedProfile?.id, isLoading]);
 
-
-  
   const handleEditClick = (entry: GrowthEntry) => {
-    setEditingEntryId(entry.entryId); 
-    setCreatedAt(entry?.createdAt ?? ''); 
+    setEditingEntryId(entry.entryId);
+    setCreatedAt(entry?.createdAt ?? '');
     setWeight(entry.weight?.toString() || '');
     setWeightUnit(entry.weightUnit || 'kg');
     setHeight(entry.height?.toString() || '');
@@ -103,16 +98,21 @@ const GrowthTracker: React.FC = () => {
     setNotes(entry.notes || '');
   };
 
-  
   const validate = () => {
     if (!selectedProfile) return 'No profile selected.';
     if (!createdAt) return 'Time is required.';
     if (!weight && !height && !headCircumference) {
       return 'Please enter at least one measurement (Weight, Height, or Head Circumference).';
     }
-    if (weight && (isNaN(Number(weight)) || Number(weight) <= 0)) return 'Weight must be a positive number.';
-    if (height && (isNaN(Number(height)) || Number(height) <= 0)) return 'Height must be a positive number.';
-    if (headCircumference && (isNaN(Number(headCircumference)) || Number(headCircumference) <= 0)) return 'Head circumference must be a positive number.';
+    if (weight && (isNaN(Number(weight)) || Number(weight) <= 0))
+      return 'Weight must be a positive number.';
+    if (height && (isNaN(Number(height)) || Number(height) <= 0))
+      return 'Height must be a positive number.';
+    if (
+      headCircumference &&
+      (isNaN(Number(headCircumference)) || Number(headCircumference) <= 0)
+    )
+      return 'Head circumference must be a positive number.';
     return null;
   };
   const buildEntryData = () => {
@@ -123,46 +123,53 @@ const GrowthTracker: React.FC = () => {
       weightUnit: weight ? weightUnit : undefined,
       height: height ? parseFloat(height) : undefined,
       heightUnit: height ? heightUnit : undefined,
-      headCircumference: headCircumference ? parseFloat(headCircumference) : undefined,
-      headCircumferenceUnit: headCircumference ? headCircumferenceUnit : undefined,
+      headCircumference: headCircumference
+        ? parseFloat(headCircumference)
+        : undefined,
+      headCircumferenceUnit: headCircumference
+        ? headCircumferenceUnit
+        : undefined,
       notes: notes || undefined,
     };
   };
-  const {
-    isSubmitting,
-    formError,
-    handleSubmit,
-    setFormError,
-  } = useTrackerForm<NewGrowthEntryData>({
-    editingEntryId,
-    setEditingEntryId,
-    selectedProfileId: selectedProfile?.id,
-    trackerType: 'growth',
-    fetchEntries,
-    buildEntryData,
-    validate,
-    resetForm,
-    apiClient,
-  });
+  const { isSubmitting, formError, handleSubmit, setFormError } =
+    useTrackerForm<NewGrowthEntryData>({
+      editingEntryId,
+      setEditingEntryId,
+      selectedProfileId: selectedProfile?.id,
+      trackerType: 'growth',
+      fetchEntries,
+      buildEntryData,
+      validate,
+      resetForm,
+      apiClient,
+    });
 
-  
   if (isLoading && !selectedProfile) {
     return <div>Loading profile data...</div>;
   }
 
-  
   if (displayError && !selectedProfile) {
-     return <div className="error-message">Error loading profiles: {displayError}</div>;
+    return (
+      <div className="error-message">
+        Error loading profiles: {displayError}
+      </div>
+    );
   }
 
   return (
     <div className="main-container">
-      <h2 className="tracker-title">Growth Tracker {profileName ? `for ${profileName}` : '(Select Profile...)'}</h2>
+      <h2 className="tracker-title">
+        Growth Tracker{' '}
+        {profileName ? `for ${profileName}` : '(Select Profile...)'}
+      </h2>
 
       {}
       {formError && <p className="error-message">Error: {formError}</p>}
       {}
-      {displayError && !formError && <p className="error-message">Error: {displayError}</p>}
+      {displayError && !formError && (
+        <p className="error-message">Error: {displayError}</p>
+      )}
 
       {}
       {selectedProfile ? (
@@ -221,7 +228,9 @@ const GrowthTracker: React.FC = () => {
                 </select>
               </div>
               <div>
-                <label htmlFor="growthHead">Head Circumference (Optional):</label>
+                <label htmlFor="growthHead">
+                  Head Circumference (Optional):
+                </label>
                 <input
                   type="number"
                   id="growthHead"
@@ -273,9 +282,7 @@ const GrowthTracker: React.FC = () => {
           <hr />
 
           <section className="section-card">
-            <h3>
-              Growth Log {profileName ? `for ${profileName}` : ''}
-            </h3>
+            <h3>Growth Log {profileName ? `for ${profileName}` : ''}</h3>
             {}
             {isLoading && entries.length === 0 ? (
               <p>Loading log...</p>
@@ -296,7 +303,16 @@ const GrowthTracker: React.FC = () => {
                   }
                   return (
                     <li key={entry.entryId}>
-                      <strong>Date:</strong> {isTimeValid && entryDate ? entryDate.toLocaleString(undefined, { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : 'Invalid Time'}
+                      <strong>Date:</strong>{' '}
+                      {isTimeValid && entryDate
+                        ? entryDate.toLocaleString(undefined, {
+                            year: 'numeric',
+                            month: '2-digit',
+                            day: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })
+                        : 'Invalid Time'}
                       {entry.weight && (
                         <>
                           <br /> Weight: {entry.weight} {entry.weightUnit}
@@ -309,18 +325,22 @@ const GrowthTracker: React.FC = () => {
                       )}
                       {entry.headCircumference && (
                         <>
-                          <br /> Head: {entry.headCircumference} {entry.headCircumferenceUnit}
+                          <br /> Head: {entry.headCircumference}{' '}
+                          {entry.headCircumferenceUnit}
                         </>
                       )}
                       {entry.notes && (
                         <>
-                          <br />Notes: {entry.notes}
+                          <br />
+                          Notes: {entry.notes}
                         </>
                       )}
                       <div className="tracker-log-actions">
                         <button
                           onClick={() => handleEditClick(entry)}
-                          disabled={isLoading || isSubmitting || !!editingEntryId}
+                          disabled={
+                            isLoading || isSubmitting || !!editingEntryId
+                          }
                           className="tracker-action-btn tracker-edit-btn"
                           title="Edit entry"
                         >
@@ -328,7 +348,9 @@ const GrowthTracker: React.FC = () => {
                         </button>
                         <button
                           onClick={() => handleDeleteEntry(entry.entryId)}
-                          disabled={isLoading || isSubmitting || !!editingEntryId}
+                          disabled={
+                            isLoading || isSubmitting || !!editingEntryId
+                          }
                           className="tracker-action-btn tracker-delete-btn"
                           title="Delete entry"
                         >
@@ -343,8 +365,7 @@ const GrowthTracker: React.FC = () => {
           </section>
         </>
       ) : (
-         
-         <p style={{ color: 'orange' }}>Please select a baby profile first.</p>
+        <p style={{ color: 'orange' }}>Please select a baby profile first.</p>
       )}
     </div>
   );

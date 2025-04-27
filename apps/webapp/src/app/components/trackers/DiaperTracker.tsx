@@ -33,10 +33,10 @@ const DiaperTracker: React.FC = () => {
   } = useTrackerLogic<DiaperEntry>({ trackerType: 'diaper' });
 
   const [createdAt, setCreatedAt] = useState(() => {
-  const now = new Date();
-  now.setSeconds(0, 0);
-  return now.toISOString().slice(0, 16);
-});
+    const now = new Date();
+    now.setSeconds(0, 0);
+    return now.toISOString().slice(0, 16);
+  });
   const [type, setType] = useState<'wet' | 'dirty' | 'mixed'>('wet');
   const [notes, setNotes] = useState('');
 
@@ -58,15 +58,24 @@ const DiaperTracker: React.FC = () => {
   }, [entries, isLoading]);
 
   useEffect(() => {
-    if (selectedProfile && !isLoading && entries.length === 0 && !hasFetchedEmptyData) {
-      console.log(`DiaperTracker: Fetching entries for profile ${selectedProfile.id}`);
+    if (
+      selectedProfile &&
+      !isLoading &&
+      entries.length === 0 &&
+      !hasFetchedEmptyData
+    ) {
+      console.log(
+        `DiaperTracker: Fetching entries for profile ${selectedProfile.id}`
+      );
       fetchEntries();
     }
   }, [selectedProfile?.id, isLoading]);
 
   const handleEditClick = (entry: DiaperEntry) => {
     setEditingEntryId(entry.entryId);
-    setCreatedAt(formatDateTimeLocalInput(entry.startDateTime ?? entry.createdAt));
+    setCreatedAt(
+      formatDateTimeLocalInput(entry.startDateTime ?? entry.createdAt)
+    );
     setType(entry.type ?? 'wet');
     setNotes(entry.notes || '');
     setFormError(null);
@@ -84,40 +93,50 @@ const DiaperTracker: React.FC = () => {
       notes: notes || undefined,
     };
   };
-  const { isSubmitting, formError, handleSubmit, setFormError } = useTrackerForm<NewDiaperEntryData>({
-    editingEntryId,
-    setEditingEntryId,
-    selectedProfileId: selectedProfile?.id,
-    trackerType: 'diaper',
-    fetchEntries,
-    buildEntryData,
-    validate,
-    resetForm,
-    apiClient,
-  });
+  const { isSubmitting, formError, handleSubmit, setFormError } =
+    useTrackerForm<NewDiaperEntryData>({
+      editingEntryId,
+      setEditingEntryId,
+      selectedProfileId: selectedProfile?.id,
+      trackerType: 'diaper',
+      fetchEntries,
+      buildEntryData,
+      validate,
+      resetForm,
+      apiClient,
+    });
 
   if (isLoading && !selectedProfile) {
     return <div>Loading profile data...</div>;
   }
 
   if (displayError && !selectedProfile) {
-    return <div style={{ color: 'red' }}>Error loading profiles: {displayError}</div>;
+    return (
+      <div style={{ color: 'red' }}>Error loading profiles: {displayError}</div>
+    );
   }
 
   return (
     <div>
-      <h2 className="tracker-title">Diaper Tracker {profileName ? `for ${profileName}` : '(Select Profile...)'}</h2>
+      <h2 className="tracker-title">
+        Diaper Tracker{' '}
+        {profileName ? `for ${profileName}` : '(Select Profile...)'}
+      </h2>
 
       {}
       {formError && <p style={{ color: 'red' }}>Error: {formError}</p>}
       {}
-      {displayError && !formError && <p style={{ color: 'red' }}>Error: {displayError}</p>}
+      {displayError && !formError && (
+        <p style={{ color: 'red' }}>Error: {displayError}</p>
+      )}
 
       {}
       {selectedProfile ? (
         <>
           <section className="section-card">
-            <h3>{editingEntryId ? 'Edit Diaper Change' : 'Add New Diaper Change'}</h3>
+            <h3>
+              {editingEntryId ? 'Edit Diaper Change' : 'Add New Diaper Change'}
+            </h3>
             <form onSubmit={handleSubmit}>
               <div>
                 <label htmlFor="diaperDate">Date:</label>
@@ -167,7 +186,11 @@ const DiaperTracker: React.FC = () => {
               </div>
               <div>
                 <label htmlFor="diaperNotes">Notes:</label>
-                <textarea id="diaperNotes" value={notes} onChange={(e) => setNotes(e.target.value)} />
+                <textarea
+                  id="diaperNotes"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                />
               </div>
               <button type="submit" disabled={isSubmitting || !selectedProfile}>
                 {isSubmitting
@@ -179,7 +202,12 @@ const DiaperTracker: React.FC = () => {
                   : 'Add Diaper Entry'}
               </button>
               {editingEntryId && (
-                <button type="button" onClick={resetForm} disabled={isSubmitting} className="tracker-cancel-btn">
+                <button
+                  type="button"
+                  onClick={resetForm}
+                  disabled={isSubmitting}
+                  className="tracker-cancel-btn"
+                >
                   Cancel Edit
                 </button>
               )}
@@ -200,13 +228,16 @@ const DiaperTracker: React.FC = () => {
             ) : (
               <ul>
                 {entries.map((entry) => {
-                  const entryDate = new Date(entry.startDateTime ?? entry.createdAt ?? '');
+                  const entryDate = new Date(
+                    entry.startDateTime ?? entry.createdAt ?? ''
+                  );
                   const isDateValid = !isNaN(entryDate.getTime());
 
                   // Infer type from wet/dirty if type is missing
                   let inferredType = '(Unknown)';
                   if (entry.type) {
-                    inferredType = entry.type.charAt(0).toUpperCase() + entry.type.slice(1);
+                    inferredType =
+                      entry.type.charAt(0).toUpperCase() + entry.type.slice(1);
                   } else if (entry.wet && entry.dirty) {
                     inferredType = 'Mixed';
                   } else if (entry.wet) {
@@ -237,7 +268,9 @@ const DiaperTracker: React.FC = () => {
                       <div className="tracker-log-actions">
                         <button
                           onClick={() => handleEditClick(entry)}
-                          disabled={isLoading || isSubmitting || !!editingEntryId}
+                          disabled={
+                            isLoading || isSubmitting || !!editingEntryId
+                          }
                           className="tracker-action-btn tracker-edit-btn"
                           title="Edit entry"
                         >
@@ -245,7 +278,9 @@ const DiaperTracker: React.FC = () => {
                         </button>
                         <button
                           onClick={() => handleDeleteEntry(entry.entryId)}
-                          disabled={isLoading || isSubmitting || !!editingEntryId}
+                          disabled={
+                            isLoading || isSubmitting || !!editingEntryId
+                          }
                           className="tracker-action-btn tracker-delete-btn"
                           title="Delete entry"
                         >

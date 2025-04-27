@@ -3,59 +3,55 @@ import { apiClient } from '../../utils/apiClient';
 import { useTrackerLogic } from '../../hooks/useTrackerLogic';
 import { useTrackerForm } from '../../hooks/useTrackerForm';
 
-import { getCurrentDateTimeLocal, formatDateTimeLocalInput } from '../../utils/dateUtils';
-
+import {
+  getCurrentDateTimeLocal,
+  formatDateTimeLocalInput,
+} from '../../utils/dateUtils';
 
 interface TemperatureEntry {
   entryId: string;
-  createdAt?: string; 
+  createdAt?: string;
   temperature: number;
   unit: 'C' | 'F';
   notes?: string;
   babyId: string;
 }
 
-
 type NewTemperatureEntryData = Omit<TemperatureEntry, 'entryId' | 'babyId'>;
 
 const TemperatureTracker: React.FC = () => {
-  
   const {
     entries,
-    isLoading, 
-    error: displayError, 
+    isLoading,
+    error: displayError,
     editingEntryId,
     setEditingEntryId,
-    selectedProfile, 
+    selectedProfile,
     profileName,
-    fetchEntries, 
-    handleDeleteEntry, 
+    fetchEntries,
+    handleDeleteEntry,
     hasFetchedEmptyData,
   } = useTrackerLogic<TemperatureEntry>({ trackerType: 'temperature' });
 
-  
   const [createdAt, setCreatedAt] = useState(() => {
-  const now = new Date();
-  now.setSeconds(0, 0);
-  return now.toISOString().slice(0, 16);
-});
+    const now = new Date();
+    now.setSeconds(0, 0);
+    return now.toISOString().slice(0, 16);
+  });
   const [temperature, setTemperature] = useState('');
   const [unit, setUnit] = useState<'C' | 'F'>('F');
   const [notes, setNotes] = useState('');
-  
 
-  
   const resetForm = useCallback(() => {
     console.log('TemperatureTracker: resetForm called');
     setCreatedAt(getCurrentDateTimeLocal());
     setTemperature('');
     setUnit('F');
     setNotes('');
-    setEditingEntryId(null); 
+    setEditingEntryId(null);
     setFormError(null);
   }, [setEditingEntryId]);
 
-  
   useEffect(() => {
     if (!isLoading && selectedProfile) {
       resetForm();
@@ -65,16 +61,19 @@ const TemperatureTracker: React.FC = () => {
     }
   }, [entries, isLoading]);
 
-  
   useEffect(() => {
-    if (selectedProfile && !isLoading && entries.length === 0 && !hasFetchedEmptyData) {
+    if (
+      selectedProfile &&
+      !isLoading &&
+      entries.length === 0 &&
+      !hasFetchedEmptyData
+    ) {
       fetchEntries();
     }
   }, [selectedProfile?.id, isLoading]);
 
-  
   const handleEditClick = (entry: TemperatureEntry) => {
-    setEditingEntryId(entry.entryId); 
+    setEditingEntryId(entry.entryId);
     setCreatedAt(formatDateTimeLocalInput(entry.createdAt));
     setTemperature(entry.temperature.toString());
     setUnit(entry.unit);
@@ -82,7 +81,6 @@ const TemperatureTracker: React.FC = () => {
     setFormError(null);
   };
 
-  
   const validate = () => {
     if (!selectedProfile) return 'No profile selected.';
     if (!createdAt || !temperature) return 'Time and temperature are required.';
@@ -98,44 +96,54 @@ const TemperatureTracker: React.FC = () => {
       notes: notes || undefined,
     };
   };
-  const { isSubmitting, formError, handleSubmit, setFormError } = useTrackerForm<NewTemperatureEntryData>({
-    editingEntryId,
-    setEditingEntryId,
-    selectedProfileId: selectedProfile?.id,
-    trackerType: 'temperature',
-    fetchEntries,
-    buildEntryData,
-    validate,
-    resetForm,
-    // apiClient is now typed to only accept (url, data), so we do not pass extra params.
-    apiClient,
-    // Error handling is handled in the hook and component via formError/displayError, no direct err.message access.
-  });
+  const { isSubmitting, formError, handleSubmit, setFormError } =
+    useTrackerForm<NewTemperatureEntryData>({
+      editingEntryId,
+      setEditingEntryId,
+      selectedProfileId: selectedProfile?.id,
+      trackerType: 'temperature',
+      fetchEntries,
+      buildEntryData,
+      validate,
+      resetForm,
+      // apiClient is now typed to only accept (url, data), so we do not pass extra params.
+      apiClient,
+      // Error handling is handled in the hook and component via formError/displayError, no direct err.message access.
+    });
 
-  
   if (isLoading && !selectedProfile) {
     return <div>Loading profile data...</div>;
   }
 
-  
   if (displayError && !selectedProfile) {
-    return <div style={{ color: 'red' }}>Error loading profiles: {displayError}</div>;
+    return (
+      <div style={{ color: 'red' }}>Error loading profiles: {displayError}</div>
+    );
   }
 
   return (
     <div>
-      <h2>Temperature Tracker {profileName ? `for ${profileName}` : '(Select Profile...)'}</h2>
+      <h2>
+        Temperature Tracker{' '}
+        {profileName ? `for ${profileName}` : '(Select Profile...)'}
+      </h2>
 
       {}
       {formError && <p style={{ color: 'red' }}>Error: {formError}</p>}
       {}
-      {displayError && !formError && <p style={{ color: 'red' }}>Error: {displayError}</p>}
+      {displayError && !formError && (
+        <p style={{ color: 'red' }}>Error: {displayError}</p>
+      )}
 
       {}
       {selectedProfile ? (
         <>
           <section>
-            <h3>{editingEntryId ? 'Edit Temperature Reading' : 'Add New Temperature Reading'}</h3>
+            <h3>
+              {editingEntryId
+                ? 'Edit Temperature Reading'
+                : 'Add New Temperature Reading'}
+            </h3>
             <form onSubmit={handleSubmit}>
               <div>
                 <label htmlFor="temperatureDate">Date:</label>
@@ -152,19 +160,26 @@ const TemperatureTracker: React.FC = () => {
                 <input
                   type="number"
                   id="tempValue"
-                  step="0.1" 
+                  step="0.1"
                   value={temperature}
                   onChange={(e) => setTemperature(e.target.value)}
                   required
                 />
-                <select value={unit} onChange={(e) => setUnit(e.target.value as 'C' | 'F')}>
+                <select
+                  value={unit}
+                  onChange={(e) => setUnit(e.target.value as 'C' | 'F')}
+                >
                   <option value="C">°C</option>
                   <option value="F">°F</option>
                 </select>
               </div>
               <div>
                 <label htmlFor="tempNotes">Notes:</label>
-                <textarea id="tempNotes" value={notes} onChange={(e) => setNotes(e.target.value)} />
+                <textarea
+                  id="tempNotes"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                />
               </div>
               <button type="submit" disabled={isSubmitting || !selectedProfile}>
                 {isSubmitting
@@ -176,7 +191,12 @@ const TemperatureTracker: React.FC = () => {
                   : 'Add Temperature Entry'}
               </button>
               {editingEntryId && (
-                <button type="button" onClick={resetForm} disabled={isSubmitting} style={{ marginLeft: '10px' }}>
+                <button
+                  type="button"
+                  onClick={resetForm}
+                  disabled={isSubmitting}
+                  style={{ marginLeft: '10px' }}
+                >
                   Cancel Edit
                 </button>
               )}
@@ -209,7 +229,16 @@ const TemperatureTracker: React.FC = () => {
                         {entry.temperature}°{entry.unit}
                       </strong>
                       <br />
-                      Time: {isDateValid && entryDate ? entryDate.toLocaleString(undefined, { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : 'Invalid Time'}
+                      Time:{' '}
+                      {isDateValid && entryDate
+                        ? entryDate.toLocaleString(undefined, {
+                            year: 'numeric',
+                            month: '2-digit',
+                            day: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })
+                        : 'Invalid Time'}
                       {entry.notes && (
                         <>
                           <br />
@@ -219,7 +248,9 @@ const TemperatureTracker: React.FC = () => {
                       <div style={{ marginTop: '5px' }}>
                         <button
                           onClick={() => handleEditClick(entry)}
-                          disabled={isLoading || isSubmitting || !!editingEntryId}
+                          disabled={
+                            isLoading || isSubmitting || !!editingEntryId
+                          }
                           style={{
                             marginRight: '10px',
                             background: 'none',
@@ -234,7 +265,9 @@ const TemperatureTracker: React.FC = () => {
                         </button>
                         <button
                           onClick={() => handleDeleteEntry(entry.entryId)}
-                          disabled={isLoading || isSubmitting || !!editingEntryId}
+                          disabled={
+                            isLoading || isSubmitting || !!editingEntryId
+                          }
                           style={{
                             marginLeft: '10px',
                             color: 'red',
@@ -256,7 +289,6 @@ const TemperatureTracker: React.FC = () => {
           </section>
         </>
       ) : (
-        
         <p style={{ color: 'orange' }}>Please select a baby profile first.</p>
       )}
     </div>

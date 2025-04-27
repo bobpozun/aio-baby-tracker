@@ -1,5 +1,10 @@
-import { apiGet, apiPost, apiPut, apiDelete, clearAuthToken } from './apiTestClient';
-
+import {
+  apiGet,
+  apiPost,
+  apiPut,
+  apiDelete,
+  clearAuthToken,
+} from './apiTestClient';
 
 interface BabyProfile {
   id: string;
@@ -22,8 +27,11 @@ describe('Diaper Tracker API Endpoints', () => {
   let createdEntryId: string | null = null;
 
   beforeAll(async () => {
-    clearAuthToken(); 
-    const profileData = { name: `DiaperTest Baby ${Date.now()}`, birthday: '2025-02-05' };
+    clearAuthToken();
+    const profileData = {
+      name: `DiaperTest Baby ${Date.now()}`,
+      birthday: '2025-02-05',
+    };
     try {
       const response: BabyProfile = await apiPost('/profiles', profileData);
       testProfileId = response.id;
@@ -41,13 +49,17 @@ describe('Diaper Tracker API Endpoints', () => {
         await apiDelete(`/profiles/${testProfileId}`);
         console.log(`Cleaned up test profile: ${testProfileId}`);
       } catch (error) {
-        console.error(`Failed to clean up test profile ${testProfileId}:`, error);
+        console.error(
+          `Failed to clean up test profile ${testProfileId}:`,
+          error
+        );
       }
     }
   });
 
   test('POST /profiles/{profileId}/trackers/diaper - should create a new diaper entry', async () => {
-    if (!testProfileId) throw new Error('Test setup failed: testProfileId is null.');
+    if (!testProfileId)
+      throw new Error('Test setup failed: testProfileId is null.');
 
     const entryData = {
       time: new Date().toISOString(),
@@ -55,7 +67,10 @@ describe('Diaper Tracker API Endpoints', () => {
       notes: 'Slightly runny',
     };
 
-    const response: DiaperEntry = await apiPost(`/profiles/${testProfileId}/trackers/diaper`, entryData);
+    const response: DiaperEntry = await apiPost(
+      `/profiles/${testProfileId}/trackers/diaper`,
+      entryData
+    );
 
     expect(response).toBeDefined();
     expect(response.entryId).toMatch(/^diaper_/);
@@ -70,15 +85,20 @@ describe('Diaper Tracker API Endpoints', () => {
   });
 
   test('GET /profiles/{profileId}/trackers/diaper - should retrieve diaper entries for the profile', async () => {
-     if (!testProfileId || !createdEntryId) throw new Error('Test setup failed: testProfileId or createdEntryId is null.');
+    if (!testProfileId || !createdEntryId)
+      throw new Error(
+        'Test setup failed: testProfileId or createdEntryId is null.'
+      );
 
-    const response: DiaperEntry[] = await apiGet(`/profiles/${testProfileId}/trackers/diaper`);
+    const response: DiaperEntry[] = await apiGet(
+      `/profiles/${testProfileId}/trackers/diaper`
+    );
 
     expect(response).toBeDefined();
     expect(Array.isArray(response)).toBe(true);
     expect(response.length).toBeGreaterThanOrEqual(1);
 
-    const foundEntry = response.find(e => e.entryId === createdEntryId);
+    const foundEntry = response.find((e) => e.entryId === createdEntryId);
     expect(foundEntry).toBeDefined();
     expect(foundEntry?.babyId).toBe(testProfileId);
     expect(foundEntry?.trackerType).toBe('diaper');
@@ -89,16 +109,21 @@ describe('Diaper Tracker API Endpoints', () => {
   // TODO: Add PUT test for updating an entry if needed
 
   test('DELETE /profiles/{profileId}/trackers/diaper/{entryId} - should delete the diaper entry', async () => {
-    if (!testProfileId || !createdEntryId) throw new Error('Test setup failed: testProfileId or createdEntryId is null.');
+    if (!testProfileId || !createdEntryId)
+      throw new Error(
+        'Test setup failed: testProfileId or createdEntryId is null.'
+      );
 
-    await apiDelete(`/profiles/${testProfileId}/trackers/diaper/${createdEntryId}`);
+    await apiDelete(
+      `/profiles/${testProfileId}/trackers/diaper/${createdEntryId}`
+    );
 
-    
-    const getResponse: DiaperEntry[] = await apiGet(`/profiles/${testProfileId}/trackers/diaper`);
-    const deletedEntry = getResponse.find(e => e.entryId === createdEntryId);
+    const getResponse: DiaperEntry[] = await apiGet(
+      `/profiles/${testProfileId}/trackers/diaper`
+    );
+    const deletedEntry = getResponse.find((e) => e.entryId === createdEntryId);
     expect(deletedEntry).toBeUndefined();
 
     createdEntryId = null;
   });
-
 });

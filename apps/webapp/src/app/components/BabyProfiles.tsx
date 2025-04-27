@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useProfiles, BabyProfile } from '../context/ProfileContext';
 
-
 const EditProfileForm: React.FC<{
   profile: BabyProfile;
   onSave: (id: string, name: string, birthday: string) => void;
@@ -17,10 +16,7 @@ const EditProfileForm: React.FC<{
   };
 
   return (
-    <form
-      onSubmit={handleSave}
-      className="section-card"
-    >
+    <form onSubmit={handleSave} className="section-card">
       <h4>Edit Profile</h4>
       <div>
         <label htmlFor={`editName-${profile.id}`}>Name:</label>
@@ -53,21 +49,21 @@ const EditProfileForm: React.FC<{
 };
 
 const BabyProfiles: React.FC = () => {
-  const { profiles, addProfile, editProfile, deleteProfile } = useProfiles(); 
+  const { profiles, addProfile, editProfile, deleteProfile } = useProfiles();
   const [newProfileName, setNewProfileName] = useState('');
   const [newProfileBirthday, setNewProfileBirthday] = useState('');
   const [editingProfileId, setEditingProfileId] = useState<string | null>(null);
 
   const handleAddProfileSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    addProfile(newProfileName, newProfileBirthday); 
+    addProfile(newProfileName, newProfileBirthday);
     setNewProfileName('');
     setNewProfileBirthday('');
   };
 
   const handleEditSave = (id: string, name: string, birthday: string) => {
-    editProfile(id, name, birthday); 
-    setEditingProfileId(null); 
+    editProfile(id, name, birthday);
+    setEditingProfileId(null);
   };
 
   const handleDeleteClick = (id: string, name: string) => {
@@ -76,7 +72,7 @@ const BabyProfiles: React.FC = () => {
         `Are you sure you want to delete the profile for ${name}? This action cannot be undone.`
       )
     ) {
-      deleteProfile(id); 
+      deleteProfile(id);
     }
   };
 

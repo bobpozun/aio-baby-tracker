@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { useProfiles } from '../context/ProfileContext'; 
-import { apiClient } from '../utils/apiClient'; 
-import checklistData from '../data/pregnancyChecklistData.json'; 
+import { useProfiles } from '../context/ProfileContext';
+import { apiClient } from '../utils/apiClient';
+import checklistData from '../data/pregnancyChecklistData.json';
 import { calculatePregnancyWeek } from '../utils/dateUtils';
-
 
 interface ChecklistItemBase {
   id: string;
@@ -11,27 +10,23 @@ interface ChecklistItemBase {
   text: string;
 }
 
-
 interface UserChecklistItemStatus {
-  itemId: string; 
+  itemId: string;
   completed: boolean;
-  
 }
-
 
 interface DisplayChecklistItem extends ChecklistItemBase {
   completed: boolean;
-  isCustom?: boolean; 
-  profileId?: string; 
+  isCustom?: boolean;
+  profileId?: string;
 }
 
 const PregnancyChecklist: React.FC = () => {
-  const { selectedProfileId, getProfileById } = useProfiles(); 
+  const { selectedProfileId, getProfileById } = useProfiles();
   const [items, setItems] = useState<DisplayChecklistItem[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  
   const currentWeek = useMemo(() => {
     const profile = getProfileById(selectedProfileId);
     if (profile?.birthday) {
@@ -40,22 +35,18 @@ const PregnancyChecklist: React.FC = () => {
     return null;
   }, [selectedProfileId, getProfileById]);
 
-
   // State for adding custom todos
   const [newTodoText, setNewTodoText] = useState('');
   // const [newTodoWeek, setNewTodoWeek] = useState<number | ''>(currentWeek); // Default to current week?
 
-  
-  
   const fetchChecklistStatus = useCallback(async () => {
     if (!selectedProfileId) {
-      setItems([]); 
+      setItems([]);
       return;
     }
     setIsLoading(true);
     setError(null);
     try {
-      
       const userStatuses = await apiClient.get<UserChecklistItemStatus[]>(
         '/checklist/status',
         {
@@ -66,14 +57,12 @@ const PregnancyChecklist: React.FC = () => {
         (userStatuses || []).map((item) => [item.itemId, item.completed])
       );
 
-      
       const mergedItems = checklistData.map((baseItem) => ({
         ...baseItem,
-        completed: statusMap.get(baseItem.id) || false, 
-        isCustom: false, 
+        completed: statusMap.get(baseItem.id) || false,
+        isCustom: false,
       }));
 
-      
       const customItems = await apiClient.get<DisplayChecklistItem[]>(
         '/checklist',
         {
@@ -81,32 +70,33 @@ const PregnancyChecklist: React.FC = () => {
         }
       );
 
-      
       const allItems = [
         ...mergedItems,
-        ...(customItems || []).map((item) => ({ ...item, isCustom: true })), 
+        ...(customItems || []).map((item) => ({ ...item, isCustom: true })),
       ];
 
       setItems(allItems);
     } catch (err: unknown) {
-        let errorMsg = 'Unknown error';
-        if (err instanceof Error) errorMsg = err.message;
-        else if (typeof err === 'string') errorMsg = err;
-        else try { errorMsg = JSON.stringify(err); } catch {}
+      let errorMsg = 'Unknown error';
+      if (err instanceof Error) errorMsg = err.message;
+      else if (typeof err === 'string') errorMsg = err;
+      else
+        try {
+          errorMsg = JSON.stringify(err);
+        } catch {}
 
       console.error('Failed to fetch checklist status:', errorMsg);
       setError(errorMsg || 'Failed to load checklist.');
-      setItems([]); 
+      setItems([]);
     } finally {
       setIsLoading(false);
     }
-  }, [selectedProfileId]); 
+  }, [selectedProfileId]);
 
   useEffect(() => {
     fetchChecklistStatus();
-  }, [fetchChecklistStatus]); 
+  }, [fetchChecklistStatus]);
 
-  
   const groupedItems = useMemo(() => {
     return items.reduce((acc, item) => {
       const week = item.week;
@@ -114,22 +104,20 @@ const PregnancyChecklist: React.FC = () => {
         acc[week] = [];
       }
       acc[week].push(item);
-      
-      
+
       return acc;
     }, {} as Record<number, DisplayChecklistItem[]>);
   }, [items]);
 
   const handleToggleComplete = useCallback(
     async (itemId: string, isCustom: boolean | undefined) => {
-      if (!selectedProfileId) return; 
+      if (!selectedProfileId) return;
 
       const originalItems = items;
       const currentStatus =
         items.find((item) => item.id === itemId)?.completed || false;
       const newStatus = !currentStatus;
 
-      
       setItems((prevItems) =>
         prevItems.map((item) =>
           item.id === itemId ? { ...item, completed: newStatus } : item
@@ -137,14 +125,13 @@ const PregnancyChecklist: React.FC = () => {
       );
 
       try {
-        
         const endpoint = isCustom
           ? `/checklist/status/${itemId}`
           : `/checklist/status/${itemId}`;
-        
+
         await apiClient.put<{ success: boolean }>(endpoint, {
           completed: newStatus,
-          profileId: selectedProfileId, 
+          profileId: selectedProfileId,
         });
         console.log(
           `Toggled item ${itemId} for profile ${selectedProfileId} to ${newStatus}`
@@ -153,31 +140,34 @@ const PregnancyChecklist: React.FC = () => {
         let errorMsg = 'Unknown error';
         if (err instanceof Error) errorMsg = err.message;
         else if (typeof err === 'string') errorMsg = err;
-        else try { errorMsg = JSON.stringify(err); } catch {}
+        else
+          try {
+            errorMsg = JSON.stringify(err);
+          } catch {}
 
         console.error(`Failed to update checklist item ${itemId}:`, errorMsg);
         setError(errorMsg || `Failed to update item status.`);
-        
+
         setItems(originalItems);
       }
     },
     [items, selectedProfileId]
-  ); 
+  );
 
   const handleAddCustomTodo = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault();
       if (!newTodoText.trim() || !selectedProfileId) return;
 
-      const weekToAdd = currentWeek; 
+      const weekToAdd = currentWeek;
       const newItemData = {
         text: newTodoText,
-        week: weekToAdd, 
+        week: weekToAdd,
         profileId: selectedProfileId,
-        completed: false, 
+        completed: false,
       };
 
-      setIsLoading(true); 
+      setIsLoading(true);
       setError(null);
 
       try {
@@ -187,17 +177,18 @@ const PregnancyChecklist: React.FC = () => {
           newItemData
         );
 
-        
-        
-        await fetchChecklistStatus(); 
+        await fetchChecklistStatus();
 
         console.log('Added custom todo:', createdItem);
-        setNewTodoText(''); 
+        setNewTodoText('');
       } catch (err: unknown) {
         let errorMsg = 'Unknown error';
         if (err instanceof Error) errorMsg = err.message;
         else if (typeof err === 'string') errorMsg = err;
-        else try { errorMsg = JSON.stringify(err); } catch {}
+        else
+          try {
+            errorMsg = JSON.stringify(err);
+          } catch {}
 
         console.error('Failed to add custom todo:', errorMsg);
         setError(errorMsg || 'Failed to add custom task.');
@@ -206,7 +197,7 @@ const PregnancyChecklist: React.FC = () => {
       }
     },
     [newTodoText, selectedProfileId, currentWeek, fetchChecklistStatus]
-  ); 
+  );
 
   return (
     <div className="main-container">
@@ -218,7 +209,6 @@ const PregnancyChecklist: React.FC = () => {
       )}
 
       <section className="section-card">
-
         <h3 style={{ marginTop: '0' }}>Add Custom Task</h3>
         <form
           onSubmit={handleAddCustomTodo}
@@ -254,7 +244,7 @@ const PregnancyChecklist: React.FC = () => {
 
       <section>
         <h3>Weekly Tasks</h3>
-        {isLoading && !items.length ? ( 
+        {isLoading && !items.length ? (
           <p>Loading checklist...</p>
         ) : !isLoading && !error && items.length === 0 && selectedProfileId ? (
           <p>
@@ -264,7 +254,6 @@ const PregnancyChecklist: React.FC = () => {
         ) : !selectedProfileId ? (
           <p>Please select a profile to view the checklist.</p>
         ) : (
-          
           Object.entries(groupedItems)
             .sort(([weekA], [weekB]) => parseInt(weekA) - parseInt(weekB))
             .map(([week, weekItems]) => {
@@ -333,7 +322,7 @@ const PregnancyChecklist: React.FC = () => {
                             marginRight: '10px',
                             verticalAlign: 'middle',
                             cursor: 'pointer',
-                          }} 
+                          }}
                         />
                         <label
                           htmlFor={`item-${item.id}`}

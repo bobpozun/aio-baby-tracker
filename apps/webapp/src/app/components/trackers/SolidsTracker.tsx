@@ -4,7 +4,10 @@ import { uploadData, getUrl, remove } from 'aws-amplify/storage';
 import { useTrackerLogic } from '../../hooks/useTrackerLogic';
 import { useTrackerForm } from '../../hooks/useTrackerForm';
 
-import { getCurrentDateTimeLocal, formatDateTimeLocalInput } from '../../utils/dateUtils';
+import {
+  getCurrentDateTimeLocal,
+  formatDateTimeLocalInput,
+} from '../../utils/dateUtils';
 
 interface SolidsEntry {
   entryId: string;
@@ -24,7 +27,8 @@ const SolidsTracker: React.FC = () => {
     if (!selectedProfile) return 'No profile selected.';
     if (!createdAt) return 'Time is required.';
     if (!food) return 'Food is required.';
-    if (amount && (isNaN(Number(amount)) || Number(amount) <= 0)) return 'Amount must be a positive number.';
+    if (amount && (isNaN(Number(amount)) || Number(amount) <= 0))
+      return 'Amount must be a positive number.';
     return null;
   };
 
@@ -60,7 +64,9 @@ const SolidsTracker: React.FC = () => {
   });
   const [food, setFood] = useState('');
   const [amount, setAmount] = useState('');
-  const [reaction, setReaction] = useState<'liked' | 'disliked' | 'neutral' | 'allergic' | ''>('');
+  const [reaction, setReaction] = useState<
+    'liked' | 'disliked' | 'neutral' | 'allergic' | ''
+  >('');
   const [notes, setNotes] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -93,7 +99,10 @@ const SolidsTracker: React.FC = () => {
             const getUrlResult = await getUrl({ key: entry.imageKey! });
             urls[entry.entryId] = getUrlResult.url.toString();
           } catch (storageError) {
-            console.error(`Error fetching URL for image key ${entry.imageKey}:`, storageError);
+            console.error(
+              `Error fetching URL for image key ${entry.imageKey}:`,
+              storageError
+            );
           }
         });
       await Promise.all(promises);
@@ -116,7 +125,12 @@ const SolidsTracker: React.FC = () => {
   }, [selectedProfile?.id, isLoading, resetForm]);
 
   useEffect(() => {
-    if (selectedProfile && !isLoading && entries.length === 0 && !hasFetchedEmptyData) {
+    if (
+      selectedProfile &&
+      !isLoading &&
+      entries.length === 0 &&
+      !hasFetchedEmptyData
+    ) {
       fetchEntries();
     }
   }, [selectedProfile?.id, isLoading]);
@@ -165,8 +179,13 @@ const SolidsTracker: React.FC = () => {
         await remove({ key: imageKeyToDelete });
         console.log(`Deleted S3 object: ${imageKeyToDelete}`);
       } catch (storageError) {
-        console.error(`Failed to delete S3 object ${imageKeyToDelete}:`, storageError);
-        alert(`Entry deleted, but failed to remove associated image: ${storageError}`);
+        console.error(
+          `Failed to delete S3 object ${imageKeyToDelete}:`,
+          storageError
+        );
+        alert(
+          `Entry deleted, but failed to remove associated image: ${storageError}`
+        );
       }
     }
   };
@@ -183,7 +202,9 @@ const SolidsTracker: React.FC = () => {
     let newImageKey = imageKey;
     if (selectedFile) {
       try {
-        const fileName = `${selectedProfile.id}/solids/${Date.now()}_${selectedFile.name}`;
+        const fileName = `${selectedProfile.id}/solids/${Date.now()}_${
+          selectedFile.name
+        }`;
         await uploadData({ key: fileName, data: selectedFile });
         newImageKey = fileName;
         setImageKey(fileName);
@@ -191,7 +212,10 @@ const SolidsTracker: React.FC = () => {
         let errorMsg = 'Unknown error';
         if (err instanceof Error) errorMsg = err.message;
         else if (typeof err === 'string') errorMsg = err;
-        else try { errorMsg = JSON.stringify(err); } catch {}
+        else
+          try {
+            errorMsg = JSON.stringify(err);
+          } catch {}
         setFormError(errorMsg || 'Failed to upload image.');
         setIsSubmitting(false);
         return;
@@ -212,11 +236,14 @@ const SolidsTracker: React.FC = () => {
         apiClient,
       }).handleSubmit(e);
     } catch (err: unknown) {
-    let errorMsg = 'Unknown error';
-    if (err instanceof Error) errorMsg = err.message;
-    else if (typeof err === 'string') errorMsg = err;
-    else try { errorMsg = JSON.stringify(err); } catch {}
-    setFormError(errorMsg || 'Failed to submit entry.');
+      let errorMsg = 'Unknown error';
+      if (err instanceof Error) errorMsg = err.message;
+      else if (typeof err === 'string') errorMsg = err;
+      else
+        try {
+          errorMsg = JSON.stringify(err);
+        } catch {}
+      setFormError(errorMsg || 'Failed to submit entry.');
     } finally {
       setIsSubmitting(false);
     }
@@ -227,23 +254,34 @@ const SolidsTracker: React.FC = () => {
   }
 
   if (displayError && !selectedProfile) {
-    return <div style={{ color: 'red' }}>Error loading profiles: {displayError}</div>;
+    return (
+      <div style={{ color: 'red' }}>Error loading profiles: {displayError}</div>
+    );
   }
 
   return (
     <div>
-      <h2 className="tracker-title">Solids Tracker {profileName ? `for ${profileName}` : '(Select Profile...)'}</h2>
+      <h2 className="tracker-title">
+        Solids Tracker{' '}
+        {profileName ? `for ${profileName}` : '(Select Profile...)'}
+      </h2>
 
       {}
       {formError && <p style={{ color: 'red' }}>Error: {formError}</p>}
       {}
-      {displayError && !formError && <p style={{ color: 'red' }}>Error: {displayError}</p>}
+      {displayError && !formError && (
+        <p style={{ color: 'red' }}>Error: {displayError}</p>
+      )}
 
       {}
       {selectedProfile ? (
         <>
           <section className="section-card">
-            <h3>{editingEntryId ? 'Edit Solid Food Entry' : 'Add New Solid Food Entry'}</h3>
+            <h3>
+              {editingEntryId
+                ? 'Edit Solid Food Entry'
+                : 'Add New Solid Food Entry'}
+            </h3>
             <form onSubmit={handleSubmit}>
               <div>
                 <label htmlFor="solidsDate">Date:</label>
@@ -257,15 +295,29 @@ const SolidsTracker: React.FC = () => {
               </div>
               <div>
                 <label htmlFor="foodItem">Food:</label>
-                <input type="text" id="foodItem" value={food} onChange={(e) => setFood(e.target.value)} required />
+                <input
+                  type="text"
+                  id="foodItem"
+                  value={food}
+                  onChange={(e) => setFood(e.target.value)}
+                  required
+                />
               </div>
               <div>
                 <label htmlFor="foodAmount">Amount (Optional):</label>
-                <input type="text" id="foodAmount" value={amount} onChange={(e) => setAmount(e.target.value)} />
+                <input
+                  type="text"
+                  id="foodAmount"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                />
               </div>
               <div>
                 <label htmlFor="foodReaction">Reaction (Optional):</label>
-                <select value={reaction} onChange={(e) => setReaction(e.target.value as any)}>
+                <select
+                  value={reaction}
+                  onChange={(e) => setReaction(e.target.value as any)}
+                >
                   <option value="">Select...</option>
                   <option value="liked">Liked</option>
                   <option value="disliked">Disliked</option>
@@ -283,11 +335,19 @@ const SolidsTracker: React.FC = () => {
                   onChange={handleFileChange}
                   style={{ display: 'block', marginTop: '5px' }}
                 />
-                {selectedFile && <p className="tracker-log-actions">New file selected: {selectedFile.name}</p>}
+                {selectedFile && (
+                  <p className="tracker-log-actions">
+                    New file selected: {selectedFile.name}
+                  </p>
+                )}
               </div>
               <div>
                 <label htmlFor="solidsNotes">Notes:</label>
-                <textarea id="solidsNotes" value={notes} onChange={(e) => setNotes(e.target.value)} />
+                <textarea
+                  id="solidsNotes"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                />
               </div>
               <button type="submit" disabled={isSubmitting || !selectedProfile}>
                 {isSubmitting
@@ -299,7 +359,12 @@ const SolidsTracker: React.FC = () => {
                   : 'Add Solids Entry'}
               </button>
               {editingEntryId && (
-                <button type="button" onClick={resetForm} disabled={isSubmitting} className="tracker-cancel-btn">
+                <button
+                  type="button"
+                  onClick={resetForm}
+                  disabled={isSubmitting}
+                  className="tracker-cancel-btn"
+                >
                   Cancel Edit
                 </button>
               )}
@@ -325,7 +390,9 @@ const SolidsTracker: React.FC = () => {
                     createdAt = new Date(entry.createdAt);
                     isDateValid = !isNaN(createdAt.getTime());
                   }
-                  const formattedReaction = entry.reaction ? ` - Reaction: ${entry.reaction}` : '';
+                  const formattedReaction = entry.reaction
+                    ? ` - Reaction: ${entry.reaction}`
+                    : '';
                   return (
                     <li key={entry.entryId}>
                       <strong>Date:</strong>{' '}
@@ -354,23 +421,24 @@ const SolidsTracker: React.FC = () => {
                         </>
                       )}
                       {entry.imageKey && (
-  <div className="tracker-log-image">
-    {logImageUrls[entry.entryId] ? (
-      <img
-        src={logImageUrls[entry.entryId]}
-        alt={`Food entry ${entry.food}`}
-        className="tracker-log-image"
-      />
-    ) : (
-      <span>[Loading image...]</span>
-    )}
-  </div>
-)}
-                      
+                        <div className="tracker-log-image">
+                          {logImageUrls[entry.entryId] ? (
+                            <img
+                              src={logImageUrls[entry.entryId]}
+                              alt={`Food entry ${entry.food}`}
+                              className="tracker-log-image"
+                            />
+                          ) : (
+                            <span>[Loading image...]</span>
+                          )}
+                        </div>
+                      )}
                       <div className="tracker-log-actions">
                         <button
                           onClick={() => handleEditClick(entry)}
-                          disabled={isLoading || isSubmitting || !!editingEntryId}
+                          disabled={
+                            isLoading || isSubmitting || !!editingEntryId
+                          }
                           className="tracker-action-btn tracker-edit-btn"
                           title="Edit entry"
                         >
@@ -378,7 +446,9 @@ const SolidsTracker: React.FC = () => {
                         </button>
                         <button
                           onClick={() => handleDeleteEntry(entry.entryId)}
-                          disabled={isLoading || isSubmitting || !!editingEntryId}
+                          disabled={
+                            isLoading || isSubmitting || !!editingEntryId
+                          }
                           className="tracker-action-btn tracker-delete-btn"
                           title="Delete entry"
                         >

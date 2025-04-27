@@ -1,6 +1,5 @@
 require('dotenv').config({ path: '.env' });
 
-
 const requiredEnvVars = [
   'USER_POOL_ID',
   'USER_POOL_CLIENT_ID',
@@ -9,7 +8,7 @@ const requiredEnvVars = [
   'API_REGION',
   'COGNITO_REGION',
   'TEST_USER_EMAIL',
-  'TEST_USER_PASSWORD'
+  'TEST_USER_PASSWORD',
 ];
 
 for (const envVar of requiredEnvVars) {
@@ -18,4 +17,4 @@ for (const envVar of requiredEnvVars) {
   }
 }
 
-console.log('Environment variables loaded successfully'); 
+console.log('Environment variables loaded successfully');

@@ -10,7 +10,9 @@ function sanitizeCloudfrontDomain(raw: string | undefined): string {
   return 'https://' + sanitized;
 }
 
-const PREG_GUIDE_IMAGES_BASE_URL = sanitizeCloudfrontDomain(import.meta.env.VITE_PREG_GUIDE_IMAGES_CLOUDFRONT_DOMAIN);
+const PREG_GUIDE_IMAGES_BASE_URL = sanitizeCloudfrontDomain(
+  import.meta.env.VITE_PREG_GUIDE_IMAGES_CLOUDFRONT_DOMAIN
+);
 
 function getPregGuideImageUrl(placeholder: string): string {
   if (/^https?:\/\//.test(placeholder)) {
@@ -36,7 +38,11 @@ const PregnancyGuide: React.FC = () => {
   const { selectedProfileId, getProfileById } = useProfiles();
 
   const minWeek = useMemo(
-    () => pregnancyData.reduce((min, p) => (p.week < min ? p.week : min), pregnancyData[0]?.week || 1),
+    () =>
+      pregnancyData.reduce(
+        (min, p) => (p.week < min ? p.week : min),
+        pregnancyData[0]?.week || 1
+      ),
     []
   );
   const maxWeek = useMemo(
@@ -49,7 +55,9 @@ const PregnancyGuide: React.FC = () => {
   );
 
   const [currentWeek, setCurrentWeek] = useState<number>(minWeek);
-  const [selectedWeekData, setSelectedWeekData] = useState<WeeklyInfo | null>(null);
+  const [selectedWeekData, setSelectedWeekData] = useState<WeeklyInfo | null>(
+    null
+  );
 
   useEffect(() => {
     const profile = getProfileById(selectedProfileId);
@@ -57,7 +65,11 @@ const PregnancyGuide: React.FC = () => {
     const dueDate = profile?.birthday;
     const calculatedWeek = calculatePregnancyWeek(dueDate);
 
-    if (calculatedWeek !== null && calculatedWeek >= minWeek && calculatedWeek <= maxWeek) {
+    if (
+      calculatedWeek !== null &&
+      calculatedWeek >= minWeek &&
+      calculatedWeek <= maxWeek
+    ) {
       setCurrentWeek(calculatedWeek);
     } else {
       setCurrentWeek(minWeek);
@@ -81,7 +93,10 @@ const PregnancyGuide: React.FC = () => {
   React.useEffect(() => {
     if (selectedWeekData) {
       console.log('PREG_GUIDE_IMAGES_BASE_URL:', PREG_GUIDE_IMAGES_BASE_URL);
-      console.log('babyImagePlaceholder:', selectedWeekData.babyImagePlaceholder);
+      console.log(
+        'babyImagePlaceholder:',
+        selectedWeekData.babyImagePlaceholder
+      );
     }
   }, [selectedWeekData]);
 
@@ -89,18 +104,26 @@ const PregnancyGuide: React.FC = () => {
     <div className="main-container">
       <h2>Pregnancy Guide</h2>
       <section className="section-card">
-
         {selectedWeekData ? (
           <div>
             <h3>Week {selectedWeekData.week}</h3>
             <p style={{ textAlign: 'center', marginBottom: 12 }}>
-              <strong>Baby is about the size of a {selectedWeekData.babySizeText}.</strong>
+              <strong>
+                Baby is about the size of a {selectedWeekData.babySizeText}.
+              </strong>
             </p>
             <div style={{ margin: '18px 0' }}>
               <img
-                src={getPregGuideImageUrl(selectedWeekData.babyImagePlaceholder)}
+                src={getPregGuideImageUrl(
+                  selectedWeekData.babyImagePlaceholder
+                )}
                 alt={selectedWeekData.babySizeText}
-                style={{ maxWidth: 160, maxHeight: 160, display: 'block', margin: '0 auto 8px auto' }}
+                style={{
+                  maxWidth: 160,
+                  maxHeight: 160,
+                  display: 'block',
+                  margin: '0 auto 8px auto',
+                }}
               />
             </div>
 
@@ -112,11 +135,20 @@ const PregnancyGuide: React.FC = () => {
             </ul>
 
             <div style={{ marginTop: '20px' }}>
-              <button onClick={() => handleWeekChange(-1)} disabled={currentWeek <= minWeek}>
+              <button
+                onClick={() => handleWeekChange(-1)}
+                disabled={currentWeek <= minWeek}
+              >
                 {'< Previous Week'}
               </button>
-              <span style={{ margin: '0 15px', fontWeight: 'bold' }}> Week {currentWeek} </span>
-              <button onClick={() => handleWeekChange(1)} disabled={currentWeek >= maxWeek}>
+              <span style={{ margin: '0 15px', fontWeight: 'bold' }}>
+                {' '}
+                Week {currentWeek}{' '}
+              </span>
+              <button
+                onClick={() => handleWeekChange(1)}
+                disabled={currentWeek >= maxWeek}
+              >
                 {'Next Week >'}
               </button>
             </div>
@@ -124,7 +156,9 @@ const PregnancyGuide: React.FC = () => {
         ) : (
           <div>
             {}
-            <p>Loading week {currentWeek} information or data not available...</p>
+            <p>
+              Loading week {currentWeek} information or data not available...
+            </p>
           </div>
         )}
       </section>

@@ -6,9 +6,8 @@ interface BaseTrackerEntry {
   createdAt?: string;
   startDateTime?: string;
   entryId: string;
- 
-  date?: string; 
-  
+
+  date?: string;
 }
 
 interface UseTrackerLogicProps {
@@ -17,8 +16,8 @@ interface UseTrackerLogicProps {
 
 interface UseTrackerLogicReturn<T extends BaseTrackerEntry> {
   entries: T[];
-  isLoading: boolean; 
-  error: string | null; 
+  isLoading: boolean;
+  error: string | null;
   editingEntryId: string | null;
   setEditingEntryId: React.Dispatch<React.SetStateAction<string | null>>;
   selectedProfile: BabyProfile | undefined;
@@ -28,7 +27,7 @@ interface UseTrackerLogicReturn<T extends BaseTrackerEntry> {
   hasFetchedEmptyData: boolean;
 }
 
-export function useTrackerLogic<T extends BaseTrackerEntry>({ 
+export function useTrackerLogic<T extends BaseTrackerEntry>({
   trackerType,
 }: UseTrackerLogicProps): UseTrackerLogicReturn<T> {
   const {
@@ -39,10 +38,11 @@ export function useTrackerLogic<T extends BaseTrackerEntry>({
   } = useProfiles();
 
   const [entries, setEntries] = useState<T[]>([]);
-  const [isLoadingEntries, setIsLoadingEntries] = useState<boolean>(false); 
-  const [localError, setLocalError] = useState<string | null>(null); 
+  const [isLoadingEntries, setIsLoadingEntries] = useState<boolean>(false);
+  const [localError, setLocalError] = useState<string | null>(null);
   const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
-  const [hasFetchedEmptyData, setHasFetchedEmptyData] = useState<boolean>(false);
+  const [hasFetchedEmptyData, setHasFetchedEmptyData] =
+    useState<boolean>(false);
 
   const fetchEntries = useCallback(async () => {
     if (!selectedProfileId || isContextLoading) {
@@ -55,11 +55,15 @@ export function useTrackerLogic<T extends BaseTrackerEntry>({
       const fetchedEntries = await apiClient.get<T[]>(
         `/profiles/${selectedProfileId}/trackers/${trackerType}`
       );
-      
+
       const filteredEntries = (fetchedEntries || []).filter(
-        entry => !('trackerType' in entry) || entry.trackerType === trackerType
+        (entry) =>
+          !('trackerType' in entry) || entry.trackerType === trackerType
       );
-      console.log(`Fetched ${trackerType} Entries (filtered):`, filteredEntries);
+      console.log(
+        `Fetched ${trackerType} Entries (filtered):`,
+        filteredEntries
+      );
 
       // Normalize entries per tracker type
       const normalizedEntries = (filteredEntries || []).map((entry) => {
@@ -69,8 +73,14 @@ export function useTrackerLogic<T extends BaseTrackerEntry>({
             if ('durationLeft' in entry || 'durationRight' in entry) {
               return {
                 ...entry,
-                durationLeft: (entry as any).durationLeft !== undefined ? Number((entry as any).durationLeft) : undefined,
-                durationRight: (entry as any).durationRight !== undefined ? Number((entry as any).durationRight) : undefined,
+                durationLeft:
+                  (entry as any).durationLeft !== undefined
+                    ? Number((entry as any).durationLeft)
+                    : undefined,
+                durationRight:
+                  (entry as any).durationRight !== undefined
+                    ? Number((entry as any).durationRight)
+                    : undefined,
               };
             }
             return entry;
@@ -81,8 +91,12 @@ export function useTrackerLogic<T extends BaseTrackerEntry>({
 
       // Sort entries by startDateTime/createdAt/date descending
       const sortedEntries = normalizedEntries.sort((a, b) => {
-        const dateA = new Date(a.startDateTime ?? a.createdAt ?? a.date ?? 0).getTime();
-        const dateB = new Date(b.startDateTime ?? b.createdAt ?? b.date ?? 0).getTime();
+        const dateA = new Date(
+          a.startDateTime ?? a.createdAt ?? a.date ?? 0
+        ).getTime();
+        const dateB = new Date(
+          b.startDateTime ?? b.createdAt ?? b.date ?? 0
+        ).getTime();
         return dateB - dateA;
       });
 
@@ -95,50 +109,59 @@ export function useTrackerLogic<T extends BaseTrackerEntry>({
     } catch (err: unknown) {
       console.error(`Failed to fetch ${trackerType} entries:`, err);
       let errorMsg = 'Unknown error';
-if (err instanceof Error) errorMsg = err.message;
-else if (typeof err === 'string') errorMsg = err;
-else try { errorMsg = JSON.stringify(err); } catch {}
-setLocalError(errorMsg || `Failed to load ${trackerType} entries.`);
+      if (err instanceof Error) errorMsg = err.message;
+      else if (typeof err === 'string') errorMsg = err;
+      else
+        try {
+          errorMsg = JSON.stringify(err);
+        } catch {}
+      setLocalError(errorMsg || `Failed to load ${trackerType} entries.`);
       setEntries([]);
       setHasFetchedEmptyData(false);
     } finally {
       setIsLoadingEntries(false);
     }
-  }, [selectedProfileId, trackerType, isContextLoading]); 
+  }, [selectedProfileId, trackerType, isContextLoading]);
 
-  const handleDeleteEntry = useCallback(async (entryId: string) => {
-    if (!selectedProfileId) return;
+  const handleDeleteEntry = useCallback(
+    async (entryId: string) => {
+      if (!selectedProfileId) return;
 
-    const originalEntries = [...entries]; 
-    setEntries((prevEntries) =>
-      prevEntries.filter((entry) => entry.entryId !== entryId)
-    );
-    setLocalError(null);
-    setIsLoadingEntries(true); 
-
-    try {
-      await apiClient.del(
-        `/profiles/${selectedProfileId}/trackers/${trackerType}/${entryId}`
+      const originalEntries = [...entries];
+      setEntries((prevEntries) =>
+        prevEntries.filter((entry) => entry.entryId !== entryId)
       );
-      console.log(`Deleted ${trackerType} entry ${entryId}`);
-      
-    } catch (err: unknown) {
-      console.error(`Failed to delete ${trackerType} entry ${entryId}:`, err);
-      let errorMsg = 'Unknown error';
-if (err instanceof Error) errorMsg = err.message;
-else if (typeof err === 'string') errorMsg = err;
-else try { errorMsg = JSON.stringify(err); } catch {}
-setLocalError(errorMsg || `Failed to delete ${trackerType} entry.`);
-      setEntries(originalEntries); 
-    } finally {
-        setIsLoadingEntries(false);
-    }
-  }, [selectedProfileId, trackerType, entries]); 
+      setLocalError(null);
+      setIsLoadingEntries(true);
 
-  
+      try {
+        await apiClient.del(
+          `/profiles/${selectedProfileId}/trackers/${trackerType}/${entryId}`
+        );
+        console.log(`Deleted ${trackerType} entry ${entryId}`);
+      } catch (err: unknown) {
+        console.error(`Failed to delete ${trackerType} entry ${entryId}:`, err);
+        let errorMsg = 'Unknown error';
+        if (err instanceof Error) errorMsg = err.message;
+        else if (typeof err === 'string') errorMsg = err;
+        else
+          try {
+            errorMsg = JSON.stringify(err);
+          } catch {}
+        setLocalError(errorMsg || `Failed to delete ${trackerType} entry.`);
+        setEntries(originalEntries);
+      } finally {
+        setIsLoadingEntries(false);
+      }
+    },
+    [selectedProfileId, trackerType, entries]
+  );
+
   const isLoading = isContextLoading || isLoadingEntries;
   const error = localError || contextError;
-  const selectedProfile = selectedProfileId ? getProfileById(selectedProfileId) : undefined;
+  const selectedProfile = selectedProfileId
+    ? getProfileById(selectedProfileId)
+    : undefined;
   const profileName = selectedProfile?.name;
 
   return {

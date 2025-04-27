@@ -1,5 +1,10 @@
-import { apiGet, apiPost, apiPut, apiDelete, clearAuthToken } from './apiTestClient';
-
+import {
+  apiGet,
+  apiPost,
+  apiPut,
+  apiDelete,
+  clearAuthToken,
+} from './apiTestClient';
 
 interface BabyProfile {
   id: string;
@@ -24,8 +29,11 @@ describe('Bottle Tracker API Endpoints', () => {
   let createdEntryId: string | null = null;
 
   beforeAll(async () => {
-    clearAuthToken(); 
-    const profileData = { name: `BottleTest Baby ${Date.now()}`, birthday: '2025-02-03' };
+    clearAuthToken();
+    const profileData = {
+      name: `BottleTest Baby ${Date.now()}`,
+      birthday: '2025-02-03',
+    };
     try {
       const response: BabyProfile = await apiPost('/profiles', profileData);
       testProfileId = response.id;
@@ -43,13 +51,17 @@ describe('Bottle Tracker API Endpoints', () => {
         await apiDelete(`/profiles/${testProfileId}`);
         console.log(`Cleaned up test profile: ${testProfileId}`);
       } catch (error) {
-        console.error(`Failed to clean up test profile ${testProfileId}:`, error);
+        console.error(
+          `Failed to clean up test profile ${testProfileId}:`,
+          error
+        );
       }
     }
   });
 
   test('POST /profiles/{profileId}/trackers/bottle - should create a new bottle entry', async () => {
-    if (!testProfileId) throw new Error('Test setup failed: testProfileId is null.');
+    if (!testProfileId)
+      throw new Error('Test setup failed: testProfileId is null.');
 
     const entryData = {
       time: new Date().toISOString(),
@@ -59,7 +71,10 @@ describe('Bottle Tracker API Endpoints', () => {
       notes: 'Mixed with cereal',
     };
 
-    const response: BottleEntry = await apiPost(`/profiles/${testProfileId}/trackers/bottle`, entryData);
+    const response: BottleEntry = await apiPost(
+      `/profiles/${testProfileId}/trackers/bottle`,
+      entryData
+    );
 
     expect(response).toBeDefined();
     expect(response.entryId).toMatch(/^bottle_/);
@@ -76,15 +91,20 @@ describe('Bottle Tracker API Endpoints', () => {
   });
 
   test('GET /profiles/{profileId}/trackers/bottle - should retrieve bottle entries for the profile', async () => {
-     if (!testProfileId || !createdEntryId) throw new Error('Test setup failed: testProfileId or createdEntryId is null.');
+    if (!testProfileId || !createdEntryId)
+      throw new Error(
+        'Test setup failed: testProfileId or createdEntryId is null.'
+      );
 
-    const response: BottleEntry[] = await apiGet(`/profiles/${testProfileId}/trackers/bottle`);
+    const response: BottleEntry[] = await apiGet(
+      `/profiles/${testProfileId}/trackers/bottle`
+    );
 
     expect(response).toBeDefined();
     expect(Array.isArray(response)).toBe(true);
     expect(response.length).toBeGreaterThanOrEqual(1);
 
-    const foundEntry = response.find(e => e.entryId === createdEntryId);
+    const foundEntry = response.find((e) => e.entryId === createdEntryId);
     expect(foundEntry).toBeDefined();
     expect(foundEntry?.babyId).toBe(testProfileId);
     expect(foundEntry?.trackerType).toBe('bottle');
@@ -95,16 +115,21 @@ describe('Bottle Tracker API Endpoints', () => {
   // TODO: Add PUT test for updating an entry if needed
 
   test('DELETE /profiles/{profileId}/trackers/bottle/{entryId} - should delete the bottle entry', async () => {
-    if (!testProfileId || !createdEntryId) throw new Error('Test setup failed: testProfileId or createdEntryId is null.');
+    if (!testProfileId || !createdEntryId)
+      throw new Error(
+        'Test setup failed: testProfileId or createdEntryId is null.'
+      );
 
-    await apiDelete(`/profiles/${testProfileId}/trackers/bottle/${createdEntryId}`);
+    await apiDelete(
+      `/profiles/${testProfileId}/trackers/bottle/${createdEntryId}`
+    );
 
-    
-    const getResponse: BottleEntry[] = await apiGet(`/profiles/${testProfileId}/trackers/bottle`);
-    const deletedEntry = getResponse.find(e => e.entryId === createdEntryId);
+    const getResponse: BottleEntry[] = await apiGet(
+      `/profiles/${testProfileId}/trackers/bottle`
+    );
+    const deletedEntry = getResponse.find((e) => e.entryId === createdEntryId);
     expect(deletedEntry).toBeUndefined();
 
     createdEntryId = null;
   });
-
 });

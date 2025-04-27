@@ -1,4 +1,16 @@
 import { Handler, APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
+import {
+  SleepEntry,
+  NursingEntry,
+  BottleEntry,
+  DiaperEntry,
+  SolidsEntry,
+  MedicineEntry,
+  GrowthEntry,
+  PottyEntry,
+  TemperatureEntry,
+  TrackerEntry
+} from "../../../../types/tracker-entry-types";
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import {
   DynamoDBDocumentClient,
@@ -279,9 +291,7 @@ export const handler: Handler = async (event: APIGatewayProxyEvent): Promise<API
         ScanIndexForward: false,
       });
       const result = await docClient.send(command);
-      // Remove 'time' field from all entries before returning
       const items = (result.Items || []).map((entry) => {
-        
         return entry;
       });
       return createApiResponse(200, items);
@@ -345,11 +355,12 @@ export const handler: Handler = async (event: APIGatewayProxyEvent): Promise<API
       });
       await docClient.send(command);
       return createApiResponse(200, { message: 'Tracker entry deleted' });
-    } else if (normalizedPath === '/reports' && httpMethod === 'GET') {
-      const { profileId, trackers, timeRange } = event.queryStringParameters || {};
-      if (!profileId || !trackers || !timeRange) {
+    } else if (normalizedPath === '/profiles/{profileId}/reports' && httpMethod === 'GET') {
+      const { trackers, timeRange } = event.queryStringParameters || {};
+      const babyId = pathParameters?.profileId;
+      if (!babyId || !trackers || !timeRange) {
         return createApiResponse(400, {
-          message: 'Missing required query parameters: profileId, trackers, timeRange',
+          message: 'Missing required parameters: profileId (in path), trackers, or timeRange',
         });
       }
 
@@ -374,7 +385,7 @@ export const handler: Handler = async (event: APIGatewayProxyEvent): Promise<API
         TableName: trackerEntriesTable,
         KeyConditionExpression: 'babyId = :bid',
         ExpressionAttributeValues: {
-          ':bid': profileId,
+          ':bid': babyId,
         },
         ScanIndexForward: false,
       });
@@ -394,160 +405,154 @@ export const handler: Handler = async (event: APIGatewayProxyEvent): Promise<API
         const entries = allEntries.filter((e: any) => e.trackerType === tracker);
         console.log(`DEBUG: entries for tracker ${tracker}:`, JSON.stringify(entries, null, 2));
         if (tracker === 'sleep') {
-           // Calculate duration in hours from startDateTime and endDateTime
-           const getDurationHours = (e: any) => {
-             const start = e.startDateTime ? new Date(e.startDateTime) : null;
-             const end = e.endDateTime ? new Date(e.endDateTime) : null;
-             if (start && end && !isNaN(start.getTime()) && !isNaN(end.getTime())) {
-               return (end.getTime() - start.getTime()) / (1000 * 60 * 60);
-             }
-             return 0;
-           };
-           const totalHours = entries.reduce((sum: number, e: any) => sum + getDurationHours(e), 0);
-           const avgDuration = entries.length ? totalHours / entries.length : 0;
-           const chartData = entries.map((e: any) => ({
-             date: e.startDateTime || e.createdAt || e.startTime,
-             startDateTime: e.startDateTime || e.createdAt || e.startTime,
-             hours: getDurationHours(e),
-           }));
-           report.sleepSummary = { totalHours, avgDuration, chartData };
-        } else if (tracker === 'nursing') {
-          let chartData: Array<{
-            date: string;
-            side: string;
-            duration: number;
-            startDateTime?: string;
-          }> = [];
-          let allDurations: number[] = [];
-
-          entries.forEach((e: any) => {
-            if (e.durationLeft && e.durationLeft > 0) {
-              chartData.push({
-                date: e.startTime,
-                startDateTime: e.startTime,
-                side: 'left',
-                duration: e.durationLeft,
-              });
-              allDurations.push(e.durationLeft);
+          const getDurationHours = (e: any) => {
+            const start = e.startDateTime ? new Date(e.startDateTime) : null;
+            const end = e.endDateTime ? new Date(e.endDateTime) : null;
+            if (start && end && !isNaN(start.getTime()) && !isNaN(end.getTime())) {
+              return (end.getTime() - start.getTime()) / (1000 * 60 * 60);
             }
-            if (e.durationRight && e.durationRight > 0) {
-              chartData.push({
-                date: e.startTime,
-                startDateTime: e.startTime,
-                side: 'right',
-                duration: e.durationRight,
-              });
-              allDurations.push(e.durationRight);
-            }
-          });
-
-          const totalSessions = allDurations.length;
-          const avgDuration = totalSessions ? allDurations.reduce((sum, d) => sum + d, 0) / totalSessions : 0;
-          report.nursingSummary = {
-            totalSessions,
-            avgDuration,
-            chartData,
+            return 0;
           };
-        } else if (tracker === 'bottle') {
-          const totalBottles = entries.length;
-          const avgAmount = entries.length
-            ? entries.reduce((sum: number, e: any) => sum + (e.amount || 0), 0) / entries.length
-            : 0;
+          const totalHours = entries.reduce((sum: number, e: any) => sum + getDurationHours(e), 0);
+          const avgDuration = entries.length ? totalHours / entries.length : 0;
           const chartData = entries.map((e: any) => ({
             date: e.startDateTime || e.createdAt || e.startTime,
             startDateTime: e.startDateTime || e.createdAt || e.startTime,
-            amount: e.amount || 0,
+            endDateTime: e.endDateTime,
+            hours: getDurationHours(e) !== undefined && getDurationHours(e) !== null ? Number(getDurationHours(e)) : null,
           }));
-          report.bottleSummary = { totalBottles, avgAmount, chartData };
+          report.sleepSummary = {
+            totalHours: Number(totalHours),
+            avgDuration: Number(avgDuration),
+            chartData
+          };
+        } else if (tracker === 'nursing') {
+          const totalSessions = entries.length;
+          const avgDuration = entries.length
+            ? entries.reduce((sum: number, e: any) => sum + (e.duration || 0), 0) / entries.length
+            : 0;
+          const avgVolume = entries.length
+            ? entries.reduce((sum: number, e: any) => sum + (e.volume || 0), 0) / entries.length
+            : 0;
+          const chartData = entries
+            .filter((e: any) => e.side === 'left' || e.side === 'right')
+            .map((e: any) => ({
+              date: e.startDateTime || e.createdAt,
+              startDateTime: e.startDateTime || e.createdAt || e.startTime,
+              side: e.side,
+              duration: e.duration !== undefined && e.duration !== null ? Number(e.duration) : 0,
+              volume: e.volume !== undefined && e.volume !== null ? Number(e.volume) : null,
+            }));
+          report.nursingSummary = {
+            totalSessions,
+            avgDuration: Number(avgDuration),
+            avgVolume: Number(avgVolume),
+            chartData
+          };
+        } else if (tracker === 'bottle') {
+          const totalBottles = entries.length;
+          const avgVolume = entries.length
+            ? entries.reduce((sum: number, e: any) => sum + (e.volume || 0), 0) / entries.length
+            : 0;
+          const chartData = entries.map((e: any) => ({
+            date: e.startDateTime || e.createdAt,
+            startDateTime: e.startDateTime || e.createdAt || e.startTime,
+            volume: e.volume !== undefined && e.volume !== null ? Number(e.volume) : (e.amount !== undefined && e.amount !== null ? Number(e.amount) : null),
+          }));
+          report.bottleSummary = {
+            totalBottles,
+            avgVolume: Number(avgVolume),
+            chartData
+          };
         } else if (tracker === 'diaper') {
-          const wetCount = entries.filter((e: any) => e.type === 'wet').length;
-          const dirtyCount = entries.filter((e: any) => e.type === 'dirty').length;
-          const chartData = entries.map((e: any) => {
-            const time = extractAndFormatTime(e);
-            return {
-              date: time,
-              startDateTime: time,
-              type: e.type,
-            };
-          });
-          report.diaperSummary = { wetCount, dirtyCount, chartData };
+          const wetCount = entries.filter((e: any) => e.type === 'wet' || e.type === 'mixed').length;
+          const dirtyCount = entries.filter((e: any) => e.type === 'dirty' || e.type === 'mixed').length;
+          const chartData = entries.map((e: any) => ({
+            date: e.startDateTime || e.createdAt,
+            startDateTime: e.startDateTime || e.createdAt || e.startTime,
+            wet: e.type === 'wet' || e.type === 'mixed' ? 1 : 0,
+            dirty: e.type === 'dirty' || e.type === 'mixed' ? 1 : 0,
+          }));
+          report.diaperSummary = {
+            wetCount,
+            dirtyCount,
+            chartData
+          };
         } else if (tracker === 'solids') {
           const totalFeedings = entries.length;
           const avgAmount = entries.length
             ? entries.reduce((sum: number, e: any) => sum + (e.amount || 0), 0) / entries.length
             : 0;
           const chartData = entries.map((e: any) => ({
-            date: e.startDateTime || e.createdAt || e.startTime,
+            date: e.startDateTime || e.createdAt,
             startDateTime: e.startDateTime || e.createdAt || e.startTime,
-            amount: e.amount || 0,
+            amount: e.amount !== undefined && e.amount !== null ? Number(e.amount) : null,
+            volume: e.amount !== undefined && e.amount !== null ? Number(e.amount) : null,
           }));
-          report.solidsSummary = { totalFeedings, avgAmount, chartData };
+          report.solidsSummary = {
+            totalFeedings,
+            avgAmount: Number(avgAmount).toFixed(2),
+            chartData
+          };
         } else if (tracker === 'medicine') {
-          // Only use entries with a valid date
-          const validEntries = entries.filter((e: any) => e.startDateTime || e.createdAt || e.startTime);
-          const totalDoses = validEntries.length;
-          const medicinesGiven = Array.from(new Set(validEntries.map((e: any) => e.medicineName).filter(Boolean)));
-          const chartData = validEntries.map((e: any) => ({
-            date: e.startDateTime || e.createdAt || e.startTime,
+          const totalDoses = entries.length;
+          const medicinesGiven = Array.from(new Set(entries.map((e: any) => e.medicineName).filter(Boolean)));
+          const chartData = entries.map((e: any) => ({
+            date: e.startDateTime || e.createdAt,
             startDateTime: e.startDateTime || e.createdAt || e.startTime,
-            medicineName: e.medicineName || '',
-            trackerType: e.trackerType,
+            medicineName: e.medicineName ?? null,
+            doses: e.doses !== undefined && e.doses !== null ? Number(e.doses) : 1,
           }));
-          report.medicineSummary = { totalDoses, medicinesGiven, chartData };
+          report.medicineSummary = {
+            totalDoses,
+            medicinesGiven,
+            chartData
+          };
         } else if (tracker === 'growth') {
-          // Only use entries with a valid date
-          const validEntries = entries.filter((e: any) => e.startDateTime || e.createdAt || e.startTime);
-          // Sort by valid date descending
-          const sorted = validEntries.sort((a: any, b: any) => {
-            const dateA = new Date(a.startDateTime || a.createdAt || a.startTime).getTime();
-            const dateB = new Date(b.startDateTime || b.createdAt || b.startTime).getTime();
-            return dateB - dateA;
-          });
-          const latest = sorted[0] || {};
-          const chartData = validEntries.map((e: any) => ({
-            date: e.startDateTime || e.createdAt || e.startTime,
+          const latestEntry = entries.reduce((latest: any, e: any) => {
+            const latestDate = latest ? new Date(latest.startDateTime || latest.createdAt) : null;
+            const eDate = new Date(e.startDateTime || e.createdAt);
+            return !latestDate || eDate > latestDate ? e : latest;
+          }, null);
+          const chartData = entries.map((e: any) => ({
+            date: e.startDateTime || e.createdAt,
             startDateTime: e.startDateTime || e.createdAt || e.startTime,
-            weight: e.weight,
-            height: e.height,
-            trackerType: e.trackerType,
+            weight: e.weight !== undefined && e.weight !== null ? Number(e.weight) : null,
+            height: e.height !== undefined && e.height !== null ? Number(e.height) : null,
           }));
           report.growthSummary = {
-            latestWeight: latest.weight,
-            latestHeight: latest.height,
-            chartData,
+            latestWeight: latestEntry?.weight !== undefined && latestEntry?.weight !== null ? Number(latestEntry.weight).toFixed(2) : null,
+            latestHeight: latestEntry?.height !== undefined && latestEntry?.height !== null ? Number(latestEntry.height).toFixed(2) : null,
+            chartData
           };
         } else if (tracker === 'potty') {
-          // Only use entries with a valid date
-          const validEntries = entries.filter((e: any) => e.startDateTime || e.createdAt || e.startTime);
-          const peeCount = validEntries.filter((e: any) => e.type === 'pee').length;
-          const poopCount = validEntries.filter((e: any) => e.type === 'poop').length;
-          const chartData = validEntries.map((e: any) => {
-            const dateStr = e.startDateTime || e.createdAt || e.startTime;
-            return {
-              date: dateStr,
-              startDateTime: dateStr,
-              type: e.type,
-              trackerType: e.trackerType,
-            };
-          });
-          report.pottySummary = { peeCount, poopCount, chartData };
+          const peeCount = entries.filter((e: any) => e.type === 'pee' || e.type === 'both').length;
+          const poopCount = entries.filter((e: any) => e.type === 'poop' || e.type === 'both').length;
+          const chartData = entries.map((e: any) => ({
+            date: e.startDateTime || e.createdAt,
+            startDateTime: e.startDateTime || e.createdAt || e.startTime,
+            pee: e.type === 'pee' || e.type === 'both' ? 1 : 0,
+            poop: e.type === 'poop' || e.type === 'both' ? 1 : 0,
+          }));
+          report.pottySummary = {
+            peeCount,
+            poopCount,
+            chartData
+          };
         } else if (tracker === 'temperature') {
-          // Only use entries with a valid date
-          const validEntries = entries.filter((e: any) => e.startDateTime || e.createdAt || e.startTime);
+          const validEntries = entries.filter((e: any) => e.temperature);
           const readingsCount = validEntries.length;
-          const avgTemp = readingsCount
-            ? validEntries.reduce((sum: number, e: any) => sum + (e.temperature || 0), 0) / readingsCount
-            : 0;
-          const chartData = validEntries.map((e: any) => {
-            const dateStr = e.startDateTime || e.createdAt || e.startTime;
-            return {
-              date: dateStr,
-              startDateTime: dateStr,
-              temperature: e.temperature || 0,
-              trackerType: e.trackerType,
-            };
-          });
-          report.temperatureSummary = { readingsCount, avgTemp, chartData };
+          const avgTemp = validEntries.reduce((sum: number, e: any) => sum + e.temperature, 0) / readingsCount;
+          const chartData = validEntries.map((e: any) => ({
+            date: e.startDateTime || e.createdAt || e.startTime,
+            startDateTime: e.startDateTime || e.createdAt || e.startTime,
+            temperature: e.temperature !== undefined && e.temperature !== null ? Number(e.temperature) : null,
+          }));
+          report.temperatureSummary = {
+            readingsCount,
+            avgTemp: Number(avgTemp).toFixed(2),
+            chartData
+          };
         }
       }
       return createApiResponse(200, report);

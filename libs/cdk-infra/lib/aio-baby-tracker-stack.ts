@@ -289,11 +289,6 @@ export class AioBabyTrackerStack extends cdk.Stack {
       authorizationType: apigateway.AuthorizationType.COGNITO,
       authorizer: authorizer,
     });
-    const reportsResource = api.root.addResource('reports');
-    reportsResource.addMethod('GET', undefined, {
-      authorizationType: apigateway.AuthorizationType.COGNITO,
-      authorizer: authorizer,
-    });
 
     profilesResource.addMethod('GET', undefined, {
       authorizationType: apigateway.AuthorizationType.COGNITO,
@@ -312,6 +307,13 @@ export class AioBabyTrackerStack extends cdk.Stack {
     profileIdResource.addMethod('DELETE', undefined, {
       authorizationType: apigateway.AuthorizationType.COGNITO,
       authorizer: authorizer,
+    });
+    // Add /profiles/{profileId}/reports as a child resource after profileIdResource is declared
+    const reportsResource = profileIdResource.addResource('reports');
+    reportsResource.addMethod('GET', undefined, {
+      authorizationType: apigateway.AuthorizationType.COGNITO,
+      authorizer: authorizer,
+      apiKeyRequired: false,
     });
 
     const trackersResource = profileIdResource.addResource('trackers');

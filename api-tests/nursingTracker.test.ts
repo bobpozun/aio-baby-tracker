@@ -1,5 +1,10 @@
-import { apiGet, apiPost, apiPut, apiDelete, clearAuthToken } from './apiTestClient';
-
+import {
+  apiGet,
+  apiPost,
+  apiPut,
+  apiDelete,
+  clearAuthToken,
+} from './apiTestClient';
 
 interface BabyProfile {
   id: string;
@@ -24,8 +29,11 @@ describe('Nursing Tracker API Endpoints', () => {
   let createdEntryId: string | null = null;
 
   beforeAll(async () => {
-    clearAuthToken(); 
-    const profileData = { name: `NursingTest Baby ${Date.now()}`, birthday: '2025-02-02' };
+    clearAuthToken();
+    const profileData = {
+      name: `NursingTest Baby ${Date.now()}`,
+      birthday: '2025-02-02',
+    };
     try {
       const response: BabyProfile = await apiPost('/profiles', profileData);
       testProfileId = response.id;
@@ -43,13 +51,17 @@ describe('Nursing Tracker API Endpoints', () => {
         await apiDelete(`/profiles/${testProfileId}`);
         console.log(`Cleaned up test profile: ${testProfileId}`);
       } catch (error) {
-        console.error(`Failed to clean up test profile ${testProfileId}:`, error);
+        console.error(
+          `Failed to clean up test profile ${testProfileId}:`,
+          error
+        );
       }
     }
   });
 
   test('POST /profiles/{profileId}/trackers/nursing - should create a new nursing entry', async () => {
-    if (!testProfileId) throw new Error('Test setup failed: testProfileId is null.');
+    if (!testProfileId)
+      throw new Error('Test setup failed: testProfileId is null.');
 
     const entryData = {
       startTime: new Date().toISOString(),
@@ -59,7 +71,10 @@ describe('Nursing Tracker API Endpoints', () => {
       notes: 'Good latch',
     };
 
-    const response: NursingEntry = await apiPost(`/profiles/${testProfileId}/trackers/nursing`, entryData);
+    const response: NursingEntry = await apiPost(
+      `/profiles/${testProfileId}/trackers/nursing`,
+      entryData
+    );
 
     expect(response).toBeDefined();
     expect(response.entryId).toMatch(/^nursing_/);
@@ -76,15 +91,20 @@ describe('Nursing Tracker API Endpoints', () => {
   });
 
   test('GET /profiles/{profileId}/trackers/nursing - should retrieve nursing entries for the profile', async () => {
-     if (!testProfileId || !createdEntryId) throw new Error('Test setup failed: testProfileId or createdEntryId is null.');
+    if (!testProfileId || !createdEntryId)
+      throw new Error(
+        'Test setup failed: testProfileId or createdEntryId is null.'
+      );
 
-    const response: NursingEntry[] = await apiGet(`/profiles/${testProfileId}/trackers/nursing`);
+    const response: NursingEntry[] = await apiGet(
+      `/profiles/${testProfileId}/trackers/nursing`
+    );
 
     expect(response).toBeDefined();
     expect(Array.isArray(response)).toBe(true);
     expect(response.length).toBeGreaterThanOrEqual(1);
 
-    const foundEntry = response.find(e => e.entryId === createdEntryId);
+    const foundEntry = response.find((e) => e.entryId === createdEntryId);
     expect(foundEntry).toBeDefined();
     expect(foundEntry?.babyId).toBe(testProfileId);
     expect(foundEntry?.trackerType).toBe('nursing');
@@ -95,16 +115,21 @@ describe('Nursing Tracker API Endpoints', () => {
   // TODO: Add PUT test for updating an entry if needed
 
   test('DELETE /profiles/{profileId}/trackers/nursing/{entryId} - should delete the nursing entry', async () => {
-    if (!testProfileId || !createdEntryId) throw new Error('Test setup failed: testProfileId or createdEntryId is null.');
+    if (!testProfileId || !createdEntryId)
+      throw new Error(
+        'Test setup failed: testProfileId or createdEntryId is null.'
+      );
 
-    await apiDelete(`/profiles/${testProfileId}/trackers/nursing/${createdEntryId}`);
+    await apiDelete(
+      `/profiles/${testProfileId}/trackers/nursing/${createdEntryId}`
+    );
 
-    
-    const getResponse: NursingEntry[] = await apiGet(`/profiles/${testProfileId}/trackers/nursing`);
-    const deletedEntry = getResponse.find(e => e.entryId === createdEntryId);
+    const getResponse: NursingEntry[] = await apiGet(
+      `/profiles/${testProfileId}/trackers/nursing`
+    );
+    const deletedEntry = getResponse.find((e) => e.entryId === createdEntryId);
     expect(deletedEntry).toBeUndefined();
 
     createdEntryId = null;
   });
-
 });

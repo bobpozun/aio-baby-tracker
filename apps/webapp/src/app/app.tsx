@@ -1,8 +1,8 @@
 import React from 'react';
-import { Route, Routes, Link, useNavigate } from 'react-router-dom'; 
+import { Route, Routes, Link, useNavigate } from 'react-router-dom';
 import { Authenticator, Button } from '@aws-amplify/ui-react';
 import '@aws-amplify/ui-react/styles.css';
-import { useProfiles } from './context/ProfileContext'; 
+import { useProfiles } from './context/ProfileContext';
 
 import BabyProfiles from './components/BabyProfiles';
 import PregnancyGuide from './components/PregnancyGuide';
@@ -20,9 +20,8 @@ import CentralNotes from './components/CentralNotes';
 import { AuthUser } from 'aws-amplify/auth';
 import ReportsDashboard from './components/ReportsDashboard';
 import AppLogo from '../../assets/aio-app-logo.png';
-import AppHeaderImg from '../../assets/aio-app-header.png'; 
+import AppHeaderImg from '../../assets/aio-app-header.png';
 import { getProfileAgeOrDue } from './utils/dateUtils';
-
 
 const IconWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <span className="nav-icon">{children}</span>
@@ -192,7 +191,10 @@ const DiaperIcon = () => (
       strokeLinejoin="round"
     >
       {}
-      <path d="M4 8 Q6 20 12 20 Q18 20 20 8 Q16 10 12 10 Q8 10 4 8 Z" fill="none" />
+      <path
+        d="M4 8 Q6 20 12 20 Q18 20 20 8 Q16 10 12 10 Q8 10 4 8 Z"
+        fill="none"
+      />
       {}
       <path d="M4 8 Q2 12 6 12" />
       {}
@@ -201,7 +203,6 @@ const DiaperIcon = () => (
       <path d="M12 10 Q12 15 12 20" />
     </svg>
   </IconWrapper>
-
 );
 const MedicineIcon = () => (
   <IconWrapper>
@@ -347,7 +348,6 @@ const SettingsIcon = () => (
   </IconWrapper>
 );
 
-
 interface AppContentProps {
   user?: AuthUser;
   signOut?: () => void;
@@ -365,7 +365,10 @@ const Home = ({ user, signOut }: AppContentProps) => {
         <p>Welcome, {user?.signInDetails?.loginId || 'User'}!</p>
         {}
         {signOut && (
-          <Button onClick={signOut} style={{ display: 'block', margin: '20px auto 0 auto' }}>
+          <Button
+            onClick={signOut}
+            style={{ display: 'block', margin: '20px auto 0 auto' }}
+          >
             Sign Out
           </Button>
         )}
@@ -414,55 +417,57 @@ const Settings = () => {
   );
 };
 
-
 const ProfileSelector: React.FC = () => {
   const { profiles, selectedProfileId, selectProfile } = useProfiles();
-  const navigate = useNavigate(); 
+  const navigate = useNavigate();
 
-  const handleSelectionChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+  const handleSelectionChange = (
+    event: React.ChangeEvent<HTMLSelectElement>
+  ) => {
     const value = event.target.value;
     if (value === 'add_new') {
-      navigate('/profiles'); 
+      navigate('/profiles');
     } else if (value) {
       // Ensure a profile was actually selected (not the disabled placeholder)
-      selectProfile(value); 
+      selectProfile(value);
     }
   };
 
-  
   return (
     <div
       className="profile-selector-container"
       style={{
-        marginLeft: 'auto' ,
-        alignSelf: 'center' ,
+        marginLeft: 'auto',
+        alignSelf: 'center',
       }}
     >
       {}
       <select
         id="profile-select"
-        value={selectedProfileId || ''} 
+        value={selectedProfileId || ''}
         onChange={handleSelectionChange}
         style={{
           padding: '5px 25px 5px 8px',
-           border: '1px solid #ccc',
+          border: '1px solid #ccc',
           borderRadius: '4px',
           backgroundColor: 'white',
-          fontSize: '0.9em' ,
+          fontSize: '0.9em',
         }}
       >
         {profiles.length === 0 ? (
           // NEW LOGIC: Show disabled placeholder and active Add option
-          (<>
+          <>
             <option value="" disabled>
               -- No profiles yet --
             </option>
-            <option value="add_new" style={{ fontStyle: 'italic', color: '#555' }}>
+            <option
+              value="add_new"
+              style={{ fontStyle: 'italic', color: '#555' }}
+            >
               + Add Profile
             </option>
-          </>)
+          </>
         ) : (
-          
           <>
             {profiles.map((profile) => (
               <option key={profile.id} value={profile.id}>
@@ -496,7 +501,6 @@ function AppContent({ user, signOut }: AppContentProps) {
     setIsMobileMenuOpen(!isMobileMenuOpen);
   };
 
-  
   const handleBackdropClick = () => {
     setIsMobileMenuOpen(false);
   };
@@ -507,30 +511,57 @@ function AppContent({ user, signOut }: AppContentProps) {
       {}
       <div className="app-header-container">
         <header className="app-header">
-        {}
-        <button
-          className="hamburger-btn md:hidden mr-4 p-2 rounded-md"
-          aria-label={isMobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
-          aria-expanded={isMobileMenuOpen}
-          aria-controls="main-nav"
-          onClick={toggleMobileMenu}
-          style={{ display: 'block' }}
-        >
-          {isMobileMenuOpen ? (
-            
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
-          ) : (
-            
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="18" x2="21" y2="18" /></svg>
-          )}
-        </button>
-        <img
-          src={AppHeaderImg}
-          alt="AIO Baby Tracker Header"
-          className="app-header-image" 
-        />
-        <ProfileSelector /> {}
-      </header>
+          {}
+          <button
+            className="hamburger-btn md:hidden mr-4 p-2 rounded-md"
+            aria-label={
+              isMobileMenuOpen
+                ? 'Close navigation menu'
+                : 'Open navigation menu'
+            }
+            aria-expanded={isMobileMenuOpen}
+            aria-controls="main-nav"
+            onClick={toggleMobileMenu}
+            style={{ display: 'block' }}
+          >
+            {isMobileMenuOpen ? (
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            ) : (
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <line x1="3" y1="12" x2="21" y2="12" />
+                <line x1="3" y1="6" x2="21" y2="6" />
+                <line x1="3" y1="18" x2="21" y2="18" />
+              </svg>
+            )}
+          </button>
+          <img
+            src={AppHeaderImg}
+            alt="AIO Baby Tracker Header"
+            className="app-header-image"
+          />
+          <ProfileSelector /> {}
+        </header>
       </div>
       <div
         className={`app-body-container ${isMobileMenuOpen ? 'menu-open' : ''}`}
@@ -564,9 +595,9 @@ function AppContent({ user, signOut }: AppContentProps) {
             <li>
               <ChecklistIcon /> <Link to="/checklist">Pregnancy Checklist</Link>
             </li>
-            <li>
-              <hr style={{ margin: '10px 0', borderStyle: 'dashed' }} />
-            </li>
+          </ul>
+          <br />
+          <ul>
             <li>
               <SleepIcon /> <Link to="/trackers/sleep">Sleep</Link>
             </li>
@@ -594,9 +625,9 @@ function AppContent({ user, signOut }: AppContentProps) {
             <li>
               <PottyIcon /> <Link to="/trackers/potty">Potty</Link>
             </li>
-            <li>
-              <hr style={{ margin: '10px 0', borderStyle: 'dashed' }} />
-            </li>
+          </ul>
+          <br />
+          <ul>
             <li>
               <NotesIcon /> <Link to="/notes">Central Notes</Link>
             </li>
@@ -611,21 +642,27 @@ function AppContent({ user, signOut }: AppContentProps) {
         <div className="app-main-content">
           {}
           {selectedProfileId && profile && (
-            <div style={{
-              background: 'var(--accent-light-color)',
-              color: 'var(--text-color)',
-              padding: '8px 18px',
-              borderRadius: '8px',
-              margin: '10px 0 18px 0',
-              fontWeight: 500,
-              fontSize: '1.08em',
-              border: '1px solid var(--border-color)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '18px',
-            }}>
-              <span style={{ fontWeight: 600, fontSize: '1.15em' }}>{profile.name}</span>
-              <span style={{ color: 'var(--primary-color)' }}>{getProfileAgeOrDue(profile.birthday)}</span>
+            <div
+              style={{
+                background: 'var(--accent-light-color)',
+                color: 'var(--text-color)',
+                padding: '8px 18px',
+                borderRadius: '8px',
+                margin: '10px 0 18px 0',
+                fontWeight: 500,
+                fontSize: '1.08em',
+                border: '1px solid var(--border-color)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '18px',
+              }}
+            >
+              <span style={{ fontWeight: 600, fontSize: '1.15em' }}>
+                {profile.name}
+              </span>
+              <span style={{ color: 'var(--primary-color)' }}>
+                {getProfileAgeOrDue(profile.birthday)}
+              </span>
             </div>
           )}
           {}
@@ -641,7 +678,10 @@ function AppContent({ user, signOut }: AppContentProps) {
             <Route path="/trackers/diaper" element={<DiaperTracker />} />
             <Route path="/trackers/medicine" element={<MedicineTracker />} />
             <Route path="/trackers/growth" element={<GrowthTracker />} />
-            <Route path="/trackers/temperature" element={<TemperatureTracker />} />
+            <Route
+              path="/trackers/temperature"
+              element={<TemperatureTracker />}
+            />
             <Route path="/trackers/potty" element={<PottyTracker />} />
             <Route path="/notes" element={<CentralNotes />} />
             <Route path="/reports" element={<ReportsDashboard />} />
@@ -654,15 +694,14 @@ function AppContent({ user, signOut }: AppContentProps) {
 }
 
 function App() {
-  
   const authComponents = {
     Header() {
       return (
         <div style={{ textAlign: 'center', padding: '20px 0 10px' }}>
           <img
-            src={AppLogo} 
+            src={AppLogo}
             alt="AIO Baby Tracker Logo"
-            style={{ maxWidth: '150px', marginBottom: '10px' }}
+            style={{ maxWidth: '380px', marginBottom: '10px' }}
           />
         </div>
       );

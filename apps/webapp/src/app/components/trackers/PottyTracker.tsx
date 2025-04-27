@@ -3,8 +3,10 @@ import { apiClient } from '../../utils/apiClient';
 import { useTrackerLogic } from '../../hooks/useTrackerLogic';
 import { useTrackerForm } from '../../hooks/useTrackerForm';
 
-import { getCurrentDateTimeLocal, formatDateTimeLocalInput } from '../../utils/dateUtils';
-
+import {
+  getCurrentDateTimeLocal,
+  formatDateTimeLocalInput,
+} from '../../utils/dateUtils';
 
 interface PottyEntry {
   entryId: string;
@@ -15,47 +17,41 @@ interface PottyEntry {
   babyId: string;
 }
 
-
 type NewPottyEntryData = Omit<PottyEntry, 'entryId' | 'babyId'>;
 
 const PottyTracker: React.FC = () => {
-  
   const {
     entries,
-    isLoading, 
-    error: displayError, 
+    isLoading,
+    error: displayError,
     editingEntryId,
     setEditingEntryId,
-    selectedProfile, 
+    selectedProfile,
     profileName,
-    fetchEntries, 
-    handleDeleteEntry, 
+    fetchEntries,
+    handleDeleteEntry,
     hasFetchedEmptyData,
   } = useTrackerLogic<PottyEntry>({ trackerType: 'potty' });
 
-  
   const [createdAt, setCreatedAt] = useState(() => {
-  const now = new Date();
-  now.setSeconds(0, 0);
-  return now.toISOString().slice(0, 16);
-});
+    const now = new Date();
+    now.setSeconds(0, 0);
+    return now.toISOString().slice(0, 16);
+  });
   const [type, setType] = useState<'pee' | 'poop' | 'both'>('pee');
-  
-  const [notes, setNotes] = useState('');
-  
 
-  
+  const [notes, setNotes] = useState('');
+
   const resetForm = useCallback(() => {
     console.log('PottyTracker: resetForm called');
     setCreatedAt(getCurrentDateTimeLocal());
     setType('pee');
 
     setNotes('');
-    setEditingEntryId(null); 
+    setEditingEntryId(null);
     setFormError(null);
   }, [setEditingEntryId]);
 
-  
   useEffect(() => {
     if (!isLoading && selectedProfile) {
       resetForm();
@@ -65,16 +61,19 @@ const PottyTracker: React.FC = () => {
     }
   }, [entries, isLoading]);
 
-  
   useEffect(() => {
-    if (selectedProfile && !isLoading && entries.length === 0 && !hasFetchedEmptyData) {
+    if (
+      selectedProfile &&
+      !isLoading &&
+      entries.length === 0 &&
+      !hasFetchedEmptyData
+    ) {
       fetchEntries();
     }
   }, [selectedProfile?.id, isLoading]);
 
-  
   const handleEditClick = (entry: PottyEntry) => {
-    setEditingEntryId(entry.entryId); 
+    setEditingEntryId(entry.entryId);
     setCreatedAt(formatDateTimeLocalInput(entry.createdAt));
     setType(entry.type);
 
@@ -82,7 +81,6 @@ const PottyTracker: React.FC = () => {
     setFormError(null);
   };
 
-  
   const validate = () => {
     if (!selectedProfile) return 'No profile selected.';
     if (!createdAt) return 'Time is required.';
@@ -97,42 +95,50 @@ const PottyTracker: React.FC = () => {
       notes: notes || undefined,
     };
   };
-  const { isSubmitting, formError, handleSubmit, setFormError } = useTrackerForm<NewPottyEntryData>({
-    editingEntryId,
-    setEditingEntryId,
-    selectedProfileId: selectedProfile?.id,
-    trackerType: 'potty',
-    fetchEntries,
-    buildEntryData,
-    validate,
-    resetForm,
-    apiClient,
-  });
+  const { isSubmitting, formError, handleSubmit, setFormError } =
+    useTrackerForm<NewPottyEntryData>({
+      editingEntryId,
+      setEditingEntryId,
+      selectedProfileId: selectedProfile?.id,
+      trackerType: 'potty',
+      fetchEntries,
+      buildEntryData,
+      validate,
+      resetForm,
+      apiClient,
+    });
 
-  
   if (isLoading && !selectedProfile) {
     return <div>Loading profile data...</div>;
   }
 
-  
   if (displayError && !selectedProfile) {
-    return <div style={{ color: 'red' }}>Error loading profiles: {displayError}</div>;
+    return (
+      <div style={{ color: 'red' }}>Error loading profiles: {displayError}</div>
+    );
   }
 
   return (
     <div>
-      <h2 className="tracker-title">Potty Tracker {profileName ? `for ${profileName}` : '(Select Profile...)'}</h2>
+      <h2 className="tracker-title">
+        Potty Tracker{' '}
+        {profileName ? `for ${profileName}` : '(Select Profile...)'}
+      </h2>
 
       {}
       {formError && <p style={{ color: 'red' }}>Error: {formError}</p>}
       {}
-      {displayError && !formError && <p style={{ color: 'red' }}>Error: {displayError}</p>}
+      {displayError && !formError && (
+        <p style={{ color: 'red' }}>Error: {displayError}</p>
+      )}
 
       {}
       {selectedProfile ? (
         <>
           <section className="section-card">
-            <h3>{editingEntryId ? 'Edit Potty Event' : 'Add New Potty Event'}</h3>
+            <h3>
+              {editingEntryId ? 'Edit Potty Event' : 'Add New Potty Event'}
+            </h3>
             <form onSubmit={handleSubmit}>
               <div>
                 <label htmlFor="pottyDate">Date:</label>
@@ -182,7 +188,11 @@ const PottyTracker: React.FC = () => {
               </div>
               <div>
                 <label htmlFor="pottyNotes">Notes:</label>
-                <textarea id="pottyNotes" value={notes} onChange={(e) => setNotes(e.target.value)} />
+                <textarea
+                  id="pottyNotes"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                />
               </div>
               <button type="submit" disabled={isSubmitting || !selectedProfile}>
                 {isSubmitting
@@ -194,7 +204,12 @@ const PottyTracker: React.FC = () => {
                   : 'Add Potty Entry'}
               </button>
               {editingEntryId && (
-                <button type="button" onClick={resetForm} disabled={isSubmitting} className="tracker-cancel-btn">
+                <button
+                  type="button"
+                  onClick={resetForm}
+                  disabled={isSubmitting}
+                  className="tracker-cancel-btn"
+                >
                   Cancel Edit
                 </button>
               )}
@@ -229,35 +244,47 @@ const PottyTracker: React.FC = () => {
                       : 'Both';
                   return (
                     <li key={entry.entryId}>
-  <strong>Type:</strong> {formattedType}
-  <br />
-
-  <strong>Time:</strong> {isDateValid && entryDate ? entryDate.toLocaleString(undefined, { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : 'Invalid Time'}
-  {entry.notes && (
-    <>
-      <br />
-      <strong>Notes:</strong> {entry.notes}
-    </>
-  )}
-  <div className="tracker-log-actions">
-    <button
-      onClick={() => handleEditClick(entry)}
-      disabled={isLoading || isSubmitting || !!editingEntryId}
-      className="tracker-action-btn tracker-edit-btn"
-      title="Edit entry"
-    >
-      Edit
-    </button>
-    <button
-      onClick={() => handleDeleteEntry(entry.entryId)}
-      disabled={isLoading || isSubmitting || !!editingEntryId}
-      className="tracker-action-btn tracker-delete-btn"
-      title="Delete entry"
-    >
-      Delete
-    </button>
-  </div>
-</li>
+                      <strong>Type:</strong> {formattedType}
+                      <br />
+                      <strong>Time:</strong>{' '}
+                      {isDateValid && entryDate
+                        ? entryDate.toLocaleString(undefined, {
+                            year: 'numeric',
+                            month: '2-digit',
+                            day: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })
+                        : 'Invalid Time'}
+                      {entry.notes && (
+                        <>
+                          <br />
+                          <strong>Notes:</strong> {entry.notes}
+                        </>
+                      )}
+                      <div className="tracker-log-actions">
+                        <button
+                          onClick={() => handleEditClick(entry)}
+                          disabled={
+                            isLoading || isSubmitting || !!editingEntryId
+                          }
+                          className="tracker-action-btn tracker-edit-btn"
+                          title="Edit entry"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDeleteEntry(entry.entryId)}
+                          disabled={
+                            isLoading || isSubmitting || !!editingEntryId
+                          }
+                          className="tracker-action-btn tracker-delete-btn"
+                          title="Delete entry"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </li>
                   );
                 })}
               </ul>
@@ -265,7 +292,6 @@ const PottyTracker: React.FC = () => {
           </section>
         </>
       ) : (
-        
         <p style={{ color: 'orange' }}>Please select a baby profile first.</p>
       )}
     </div>

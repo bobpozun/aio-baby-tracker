@@ -103,6 +103,7 @@
     "mcp:start:browser-tools-mcp": "yarn @agentdeskai/browser-tools-mcp@latest",
     "repomix": "yarn repomix --remote https://github.com/bobpozun/aio-baby-tracker",
     "upload:pregnancy-guide-images": "tsx scripts/upload-pregnancy-guide-images.ts",
-    "remove-comments": "node scripts/remove-comments.js"
+    "remove-comments": "node scripts/remove-comments.js",
+    "prettier": "yarn prettier --write . --ignore-path .gitignore"
   }
 }

@@ -86,6 +86,21 @@ function formatNoSeconds(date: Date|string) {
   return d.toLocaleString(undefined, { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
 }
 
+// --- Tracker Entry Types ---
+
+import {
+  SleepEntry,
+  NursingEntry,
+  BottleEntry,
+  DiaperEntry,
+  SolidsEntry,
+  MedicineEntry,
+  GrowthEntry,
+  PottyEntry,
+  TemperatureEntry,
+  TrackerEntry
+} from "../types/tracker-entry-types";
+
 async function createTrackerEntries(token: string, profileId: string, startDate: Date, endDate: Date) {
   async function postEntry(url: string, payload: any, type: string, extraLog = '') {
     try {
@@ -120,9 +135,11 @@ async function createTrackerEntries(token: string, profileId: string, startDate:
     await postEntry(
       `${API_URL}/profiles/${profileId}/trackers/sleep`,
       {
+        trackerType: 'sleep',
         startDateTime: nightStart.toISOString(),
         endDateTime: nightEnd.toISOString(),
         notes: 'Night sleep',
+        duration: nightDurationMins,
         createdAt: new Date().toISOString(),
       },
       'Sleep', `Night ${formatNoSeconds(nightStart)} - ${formatNoSeconds(nightEnd)} | Duration: ${nightDurationMins}m`
@@ -138,9 +155,11 @@ async function createTrackerEntries(token: string, profileId: string, startDate:
       await postEntry(
         `${API_URL}/profiles/${profileId}/trackers/sleep`,
         {
+          trackerType: 'sleep',
           startDateTime: napStart.toISOString(),
           endDateTime: napEnd.toISOString(),
           notes: `Nap ${i + 1}`,
+          duration: napDurationMins,
           createdAt: new Date().toISOString(),
         },
         'Sleep', `Nap ${i + 1} ${formatNoSeconds(napStart)} - ${formatNoSeconds(napEnd)} | Duration: ${napDurationMins}m`
@@ -167,18 +186,23 @@ async function createTrackerEntries(token: string, profileId: string, startDate:
       durationRight = nursingDuration;
       lastSide = 'right';
     }
+    // Nursing entry with all expected fields
+    const nursingDurationTotal = (durationLeft || 0) + (durationRight || 0) || nursingDuration;
     await postEntry(
       `${API_URL}/profiles/${profileId}/trackers/nursing`,
       {
-        durationLeft,
-        durationRight,
-        lastSide,
+        trackerType: 'nursing',
         startDateTime: isoDay,
+        endDateTime: null,
+        duration: nursingDurationTotal || 0, // Always provide a number
+        durationLeft: durationLeft !== undefined && durationLeft !== null ? durationLeft : 0, // Always number
+        durationRight: durationRight !== undefined && durationRight !== null ? durationRight : 0, // Always number
+        side: lastSide || 'left', // Always provide a string value
+        volume: randomBetween(30, 120), // Always provide a number, never null or undefined
         notes: 'Demo nursing entry',
         createdAt: new Date().toISOString(),
-        trackerType: 'nursing',
       },
-      'Nursing', `${formatNoSeconds(d)} | Side: ${nursingSide}, Duration: ${nursingDuration}m`
+      'Nursing', `${formatNoSeconds(d)} | Side: ${nursingSide}, Duration: ${nursingDurationTotal}m`
     );
     
     const bottleVolume = randomBetween(60, 180);
@@ -188,34 +212,44 @@ async function createTrackerEntries(token: string, profileId: string, startDate:
       const unit = bottleUnits[Math.floor(Math.random() * bottleUnits.length)];
       const type = bottleTypes[Math.floor(Math.random() * bottleTypes.length)];
       
-      // Use 'amount' instead of 'volume', and ensure realistic nonzero values
-      let amount = unit === 'ml' ? randomBetween(60, 180) : randomBetween(2, 6);
+      // Use 'volume' instead of 'amount', and ensure realistic nonzero values
+      let volume = unit === 'ml' ? randomBetween(60, 180) : randomBetween(2, 6);
       await postEntry(
         `${API_URL}/profiles/${profileId}/trackers/bottle`,
         {
-          amount,
+          trackerType: 'bottle',
+          startDateTime: isoDay,
+          endDateTime: null,
+          volume,
           unit,
           type,
           notes: 'Demo bottle entry',
           createdAt: new Date().toISOString(),
-          trackerType: 'bottle',
         },
-        'Bottle', `${formatNoSeconds(d)} | Amount: ${amount}${unit}, Type: ${type}`
+        'Bottle', `${formatNoSeconds(d)} | Volume: ${volume}${unit}, Type: ${type}`
       );
     
     const diaperWet = Math.random() < 0.7;
     const diaperDirty = Math.random() < 0.4;
+    // Diaper type logic
+    let diaperType: 'wet' | 'dirty' | 'mixed' | 'other';
+    if (diaperWet && diaperDirty) diaperType = 'mixed';
+    else if (diaperWet) diaperType = 'wet';
+    else if (diaperDirty) diaperType = 'dirty';
+    else diaperType = 'other';
     await postEntry(
       `${API_URL}/profiles/${profileId}/trackers/diaper`,
       {
+        trackerType: 'diaper',
         startDateTime: isoDay,
+        endDateTime: null,
+        type: diaperType,
         wet: diaperWet,
         dirty: diaperDirty,
         notes: 'Demo diaper entry',
         createdAt: new Date().toISOString(),
-        trackerType: 'diaper',
       },
-      'Diaper', `${formatNoSeconds(d)} | Wet: ${diaperWet}, Dirty: ${diaperDirty}`
+      'Diaper', `${formatNoSeconds(d)} | Type: ${diaperType}, Wet: ${diaperWet}, Dirty: ${diaperDirty}`
     );
     
     if (Math.random() < 0.6) {
@@ -223,11 +257,12 @@ async function createTrackerEntries(token: string, profileId: string, startDate:
       await postEntry(
         `${API_URL}/profiles/${profileId}/trackers/solids`,
         {
+          trackerType: 'solids',
           startDateTime: isoDay,
+          endDateTime: null,
           amount: solidsAmount,
           notes: 'Demo solids entry',
           createdAt: new Date().toISOString(),
-          trackerType: 'solids',
         },
         'Solids', `${formatNoSeconds(d)} | Amount: ${solidsAmount}`
       );
@@ -238,12 +273,13 @@ async function createTrackerEntries(token: string, profileId: string, startDate:
       await postEntry(
         `${API_URL}/profiles/${profileId}/trackers/medicine`,
         {
+          trackerType: 'medicine',
           startDateTime: isoDay,
+          endDateTime: null,
           medicineName: 'DemoMed',
           dose: medDose,
           notes: 'Demo medicine entry',
           createdAt: new Date().toISOString(),
-          trackerType: 'medicine',
         },
         'Medicine', `${formatNoSeconds(d)} | Dose: ${medDose}`
       );
@@ -255,12 +291,13 @@ async function createTrackerEntries(token: string, profileId: string, startDate:
       await postEntry(
         `${API_URL}/profiles/${profileId}/trackers/growth`,
         {
+          trackerType: 'growth',
           startDateTime: isoDay,
+          endDateTime: null,
           weight: growthWeight,
           height: growthHeight,
           notes: 'Demo growth entry',
           createdAt: new Date().toISOString(),
-          trackerType: 'growth',
         },
         'Growth', `${formatNoSeconds(d)} | Weight: ${growthWeight}kg, Height: ${growthHeight}cm`
       );
@@ -269,17 +306,24 @@ async function createTrackerEntries(token: string, profileId: string, startDate:
     if (Math.random() < 0.3) {
       const pottyPee = Math.random() < 0.8;
       const pottyPoop = Math.random() < 0.3;
+      let pottyType: 'pee' | 'poop' | 'both' | 'other';
+      if (pottyPee && pottyPoop) pottyType = 'both';
+      else if (pottyPee) pottyType = 'pee';
+      else if (pottyPoop) pottyType = 'poop';
+      else pottyType = 'other';
       await postEntry(
         `${API_URL}/profiles/${profileId}/trackers/potty`,
         {
+          trackerType: 'potty',
           startDateTime: isoDay,
+          endDateTime: null,
+          type: pottyType,
           pee: pottyPee,
           poop: pottyPoop,
           notes: 'Demo potty entry',
           createdAt: new Date().toISOString(),
-          trackerType: 'potty',
         },
-        'Potty', `${formatNoSeconds(d)} | Pee: ${pottyPee}, Poop: ${pottyPoop}`
+        'Potty', `${formatNoSeconds(d)} | Type: ${pottyType}, Pee: ${pottyPee}, Poop: ${pottyPoop}`
       );
     }
     
@@ -289,12 +333,13 @@ async function createTrackerEntries(token: string, profileId: string, startDate:
       await postEntry(
         `${API_URL}/profiles/${profileId}/trackers/temperature`,
         {
+          trackerType: 'temperature',
           startDateTime: isoDay,
+          endDateTime: null,
           temperature: Number(temp),
           unit: 'F',
           notes: 'Demo temperature entry',
           createdAt: new Date().toISOString(),
-          trackerType: 'temperature',
         },
         'Temp', `${formatNoSeconds(d)} | Temp: ${temp}°F`
       );

@@ -18,7 +18,9 @@ const CentralNotes: React.FC = () => {
   const [allNotes, setAllNotes] = useState<NoteEntry[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [expandedCounts, setExpandedCounts] = useState<Record<string, number>>({});
+  const [expandedCounts, setExpandedCounts] = useState<Record<string, number>>(
+    {}
+  );
   const profileContext = useContext(ProfileContext);
 
   if (!profileContext) {
@@ -40,9 +42,12 @@ const CentralNotes: React.FC = () => {
           profileId: selectedProfileId,
         });
 
-        const getNoteDate = (note: any) => note.time || note.startTime || note.createdAt;
+        const getNoteDate = (note: any) =>
+          note.time || note.startTime || note.createdAt;
         const sortedNotes = (fetchedNotes || []).sort(
-          (a, b) => new Date(getNoteDate(b)).getTime() - new Date(getNoteDate(a)).getTime()
+          (a, b) =>
+            new Date(getNoteDate(b)).getTime() -
+            new Date(getNoteDate(a)).getTime()
         );
         setAllNotes(sortedNotes);
       } catch (err: any) {
@@ -63,11 +68,15 @@ const CentralNotes: React.FC = () => {
       <section className="section-card">
         {' '}
         {}
-        <p>All notes recorded across different trackers, sorted chronologically.</p>
+        <p>
+          All notes recorded across different trackers, sorted chronologically.
+        </p>
         {}
         {isLoading && <p>Loading notes...</p>}
         {error && <p style={{ color: 'red' }}>Error: {error}</p>}
-        {!isLoading && !error && allNotes.length === 0 && <p>No notes recorded for this profile yet.</p>}
+        {!isLoading && !error && allNotes.length === 0 && (
+          <p>No notes recorded for this profile yet.</p>
+        )}
         {!isLoading && !error && allNotes.length > 0 && (
           <div>
             {Object.entries(
@@ -92,13 +101,21 @@ const CentralNotes: React.FC = () => {
                     : new Date(0);
                 return dateB.getTime() - dateA.getTime();
               });
-              const countToShow = expandedCounts[trackerType] ?? NOTES_PER_TYPE_DEFAULT;
+              const countToShow =
+                expandedCounts[trackerType] ?? NOTES_PER_TYPE_DEFAULT;
               const isTruncated = sortedNotes.length > countToShow;
               const visibleNotes = sortedNotes.slice(0, countToShow);
 
               return (
                 <div key={trackerType} style={{ marginBottom: '2em' }}>
-                  <h3 style={{ textTransform: 'capitalize', borderBottom: '1px solid #eee' }}>{trackerType} Notes</h3>
+                  <h3
+                    style={{
+                      textTransform: 'capitalize',
+                      borderBottom: '1px solid #eee',
+                    }}
+                  >
+                    {trackerType} Notes
+                  </h3>
                   <ul style={{ listStyleType: 'none', paddingLeft: 0 }}>
                     {visibleNotes.map((note) => (
                       <li
@@ -113,7 +130,10 @@ const CentralNotes: React.FC = () => {
                       >
                         <div style={{ fontSize: '0.95em', color: '#666' }}>
                           {(() => {
-                            const dateStr = note.startDateTime || note.createdAt || note.startTime;
+                            const dateStr =
+                              note.startDateTime ||
+                              note.createdAt ||
+                              note.startTime;
                             if (typeof dateStr === 'string') {
                               const dateObj = new Date(dateStr);
                               return !isNaN(dateObj.getTime())
@@ -130,7 +150,11 @@ const CentralNotes: React.FC = () => {
                             }
                           })()}
                         </div>
-                        <div style={{ margin: '5px 0 0 0', fontStyle: 'italic' }}>{note.notes}</div>
+                        <div
+                          style={{ margin: '5px 0 0 0', fontStyle: 'italic' }}
+                        >
+                          {note.notes}
+                        </div>
                       </li>
                     ))}
                   </ul>
@@ -141,7 +165,9 @@ const CentralNotes: React.FC = () => {
                         onClick={() =>
                           setExpandedCounts((prev) => ({
                             ...prev,
-                            [trackerType]: (prev[trackerType] ?? NOTES_PER_TYPE_DEFAULT) + NOTES_PER_TYPE_DEFAULT,
+                            [trackerType]:
+                              (prev[trackerType] ?? NOTES_PER_TYPE_DEFAULT) +
+                              NOTES_PER_TYPE_DEFAULT,
                           }))
                         }
                       >

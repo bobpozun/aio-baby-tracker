@@ -6,8 +6,8 @@ interface UseTrackerFormOptions<T> {
   selectedProfileId: string | undefined;
   trackerType: string;
   fetchEntries: () => Promise<void>;
-  buildEntryData: () => T | null; 
-  validate: () => string | null; 
+  buildEntryData: () => T | null;
+  validate: () => string | null;
   resetForm: () => void;
   apiClient: {
     post: <R>(url: string, data: unknown) => Promise<R>;
@@ -59,10 +59,13 @@ export function useTrackerForm<T>({
       setEditingEntryId(null);
     } catch (err: unknown) {
       let errorMsg = 'Unknown error';
-if (err instanceof Error) errorMsg = err.message;
-else if (typeof err === 'string') errorMsg = err;
-else try { errorMsg = JSON.stringify(err); } catch {}
-setFormError(errorMsg || 'Failed to save entry.');
+      if (err instanceof Error) errorMsg = err.message;
+      else if (typeof err === 'string') errorMsg = err;
+      else
+        try {
+          errorMsg = JSON.stringify(err);
+        } catch {}
+      setFormError(errorMsg || 'Failed to save entry.');
     } finally {
       setIsSubmitting(false);
     }

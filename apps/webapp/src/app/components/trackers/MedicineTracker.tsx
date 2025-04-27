@@ -3,8 +3,10 @@ import { apiClient } from '../../utils/apiClient';
 import { useTrackerLogic } from '../../hooks/useTrackerLogic';
 import { useTrackerForm } from '../../hooks/useTrackerForm';
 
-import { getCurrentDateTimeLocal, formatDateTimeLocalInput } from '../../utils/dateUtils';
-
+import {
+  getCurrentDateTimeLocal,
+  formatDateTimeLocalInput,
+} from '../../utils/dateUtils';
 
 interface MedicineEntry {
   entryId: string;
@@ -15,47 +17,41 @@ interface MedicineEntry {
   babyId: string;
 }
 
-
 type NewMedicineEntryData = Omit<MedicineEntry, 'entryId' | 'babyId'>;
 
 const MedicineTracker: React.FC = () => {
-  
   const {
     entries,
-    isLoading, 
-    error: displayError, 
+    isLoading,
+    error: displayError,
     editingEntryId,
     setEditingEntryId,
-    selectedProfile, 
+    selectedProfile,
     profileName,
-    fetchEntries, 
-    handleDeleteEntry, 
-    hasFetchedEmptyData, 
+    fetchEntries,
+    handleDeleteEntry,
+    hasFetchedEmptyData,
   } = useTrackerLogic<MedicineEntry>({ trackerType: 'medicine' });
 
-  
   const [createdAt, setCreatedAt] = useState(() => {
-  const now = new Date();
-  now.setSeconds(0, 0);
-  return now.toISOString().slice(0, 16);
-});
+    const now = new Date();
+    now.setSeconds(0, 0);
+    return now.toISOString().slice(0, 16);
+  });
   const [medicineName, setMedicineName] = useState('');
   const [dosage, setDosage] = useState('');
   const [notes, setNotes] = useState('');
-  
 
-  
   const resetForm = useCallback(() => {
     console.log('MedicineTracker: resetForm called');
     setCreatedAt(getCurrentDateTimeLocal());
     setMedicineName('');
     setDosage('');
     setNotes('');
-    setEditingEntryId(null); 
+    setEditingEntryId(null);
     setFormError(null);
   }, [setEditingEntryId]);
 
-  
   useEffect(() => {
     if (!isLoading && selectedProfile) {
       resetForm();
@@ -65,16 +61,19 @@ const MedicineTracker: React.FC = () => {
     }
   }, [entries, isLoading]);
 
-  
   useEffect(() => {
-    if (selectedProfile && !isLoading && entries.length === 0 && !hasFetchedEmptyData) {
+    if (
+      selectedProfile &&
+      !isLoading &&
+      entries.length === 0 &&
+      !hasFetchedEmptyData
+    ) {
       fetchEntries();
     }
   }, [selectedProfile?.id, isLoading]);
 
-  
   const handleEditClick = (entry: MedicineEntry) => {
-    setEditingEntryId(entry.entryId); 
+    setEditingEntryId(entry.entryId);
     setCreatedAt(formatDateTimeLocalInput(entry.createdAt));
     setMedicineName(entry.medicineName);
     setDosage(entry.dosage || '');
@@ -82,10 +81,10 @@ const MedicineTracker: React.FC = () => {
     setFormError(null);
   };
 
-  
   const validate = () => {
     if (!selectedProfile) return 'No profile selected.';
-    if (!createdAt || !medicineName) return 'Time and medicine name are required.';
+    if (!createdAt || !medicineName)
+      return 'Time and medicine name are required.';
     return null;
   };
   const buildEntryData = () => {
@@ -97,42 +96,50 @@ const MedicineTracker: React.FC = () => {
       notes: notes || undefined,
     };
   };
-  const { isSubmitting, formError, handleSubmit, setFormError } = useTrackerForm<NewMedicineEntryData>({
-    editingEntryId,
-    setEditingEntryId,
-    selectedProfileId: selectedProfile?.id,
-    trackerType: 'medicine',
-    fetchEntries,
-    buildEntryData,
-    validate,
-    resetForm,
-    apiClient,
-  });
+  const { isSubmitting, formError, handleSubmit, setFormError } =
+    useTrackerForm<NewMedicineEntryData>({
+      editingEntryId,
+      setEditingEntryId,
+      selectedProfileId: selectedProfile?.id,
+      trackerType: 'medicine',
+      fetchEntries,
+      buildEntryData,
+      validate,
+      resetForm,
+      apiClient,
+    });
 
-  
   if (isLoading && !selectedProfile) {
     return <div>Loading profile data...</div>;
   }
 
-  
   if (displayError && !selectedProfile) {
-    return <div style={{ color: 'red' }}>Error loading profiles: {displayError}</div>;
+    return (
+      <div style={{ color: 'red' }}>Error loading profiles: {displayError}</div>
+    );
   }
 
   return (
     <div>
-      <h2 className="tracker-title">Medicine Tracker {profileName ? `for ${profileName}` : '(Select Profile...)'}</h2>
+      <h2 className="tracker-title">
+        Medicine Tracker{' '}
+        {profileName ? `for ${profileName}` : '(Select Profile...)'}
+      </h2>
 
       {}
       {formError && <p style={{ color: 'red' }}>Error: {formError}</p>}
       {}
-      {displayError && !formError && <p style={{ color: 'red' }}>Error: {displayError}</p>}
+      {displayError && !formError && (
+        <p style={{ color: 'red' }}>Error: {displayError}</p>
+      )}
 
       {}
       {selectedProfile ? (
         <>
           <section className="section-card">
-            <h3>{editingEntryId ? 'Edit Medicine Dose' : 'Add New Medicine Dose'}</h3>
+            <h3>
+              {editingEntryId ? 'Edit Medicine Dose' : 'Add New Medicine Dose'}
+            </h3>
             <form onSubmit={handleSubmit}>
               <div>
                 <label htmlFor="medicineDate">Date:</label>
@@ -156,11 +163,20 @@ const MedicineTracker: React.FC = () => {
               </div>
               <div>
                 <label htmlFor="medicineDosage">Dosage (Optional):</label>
-                <input type="text" id="medicineDosage" value={dosage} onChange={(e) => setDosage(e.target.value)} />
+                <input
+                  type="text"
+                  id="medicineDosage"
+                  value={dosage}
+                  onChange={(e) => setDosage(e.target.value)}
+                />
               </div>
               <div>
                 <label htmlFor="medicineNotes">Notes:</label>
-                <textarea id="medicineNotes" value={notes} onChange={(e) => setNotes(e.target.value)} />
+                <textarea
+                  id="medicineNotes"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                />
               </div>
               <button type="submit" disabled={isSubmitting || !selectedProfile}>
                 {isSubmitting
@@ -172,7 +188,12 @@ const MedicineTracker: React.FC = () => {
                   : 'Add Medicine Entry'}
               </button>
               {editingEntryId && (
-                <button type="button" onClick={resetForm} disabled={isSubmitting} className="tracker-cancel-btn">
+                <button
+                  type="button"
+                  onClick={resetForm}
+                  disabled={isSubmitting}
+                  className="tracker-cancel-btn"
+                >
                   Cancel Edit
                 </button>
               )}
@@ -201,9 +222,19 @@ const MedicineTracker: React.FC = () => {
                   }
                   return (
                     <li key={entry.entryId}>
-                      <strong>Date:</strong> {isDateValid && entryDate ? entryDate.toLocaleString(undefined, { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : 'Invalid Date'}
+                      <strong>Date:</strong>{' '}
+                      {isDateValid && entryDate
+                        ? entryDate.toLocaleString(undefined, {
+                            year: 'numeric',
+                            month: '2-digit',
+                            day: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })
+                        : 'Invalid Date'}
                       <br />
-                      <strong>{entry.medicineName}</strong> {entry.dosage ? `(${entry.dosage})` : ''}
+                      <strong>{entry.medicineName}</strong>{' '}
+                      {entry.dosage ? `(${entry.dosage})` : ''}
                       {entry.notes && (
                         <>
                           <br />
@@ -213,7 +244,9 @@ const MedicineTracker: React.FC = () => {
                       <div className="tracker-log-actions">
                         <button
                           onClick={() => handleEditClick(entry)}
-                          disabled={isLoading || isSubmitting || !!editingEntryId}
+                          disabled={
+                            isLoading || isSubmitting || !!editingEntryId
+                          }
                           className="tracker-action-btn tracker-edit-btn"
                           title="Edit entry"
                         >
@@ -221,7 +254,9 @@ const MedicineTracker: React.FC = () => {
                         </button>
                         <button
                           onClick={() => handleDeleteEntry(entry.entryId)}
-                          disabled={isLoading || isSubmitting || !!editingEntryId}
+                          disabled={
+                            isLoading || isSubmitting || !!editingEntryId
+                          }
                           className="tracker-action-btn tracker-delete-btn"
                           title="Delete entry"
                         >
@@ -236,7 +271,6 @@ const MedicineTracker: React.FC = () => {
           </section>
         </>
       ) : (
-        
         <p style={{ color: 'orange' }}>Please select a baby profile first.</p>
       )}
     </div>

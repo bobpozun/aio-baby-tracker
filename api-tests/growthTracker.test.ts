@@ -1,5 +1,10 @@
-import { apiGet, apiPost, apiPut, apiDelete, clearAuthToken } from './apiTestClient';
-
+import {
+  apiGet,
+  apiPost,
+  apiPut,
+  apiDelete,
+  clearAuthToken,
+} from './apiTestClient';
 
 interface BabyProfile {
   id: string;
@@ -9,7 +14,7 @@ interface BabyProfile {
 
 interface GrowthEntry {
   entryId: string;
-  date: string; 
+  date: string;
   weight?: number;
   weightUnit?: 'kg' | 'lb';
   height?: number;
@@ -27,8 +32,11 @@ describe('Growth Tracker API Endpoints', () => {
   let createdEntryId: string | null = null;
 
   beforeAll(async () => {
-    clearAuthToken(); 
-    const profileData = { name: `GrowthTest Baby ${Date.now()}`, birthday: '2025-02-07' };
+    clearAuthToken();
+    const profileData = {
+      name: `GrowthTest Baby ${Date.now()}`,
+      birthday: '2025-02-07',
+    };
     try {
       const response: BabyProfile = await apiPost('/profiles', profileData);
       testProfileId = response.id;
@@ -46,16 +54,20 @@ describe('Growth Tracker API Endpoints', () => {
         await apiDelete(`/profiles/${testProfileId}`);
         console.log(`Cleaned up test profile: ${testProfileId}`);
       } catch (error) {
-        console.error(`Failed to clean up test profile ${testProfileId}:`, error);
+        console.error(
+          `Failed to clean up test profile ${testProfileId}:`,
+          error
+        );
       }
     }
   });
 
   test('POST /profiles/{profileId}/trackers/growth - should create a new growth entry', async () => {
-    if (!testProfileId) throw new Error('Test setup failed: testProfileId is null.');
+    if (!testProfileId)
+      throw new Error('Test setup failed: testProfileId is null.');
 
     const entryData = {
-      date: new Date().toISOString().split('T')[0], 
+      date: new Date().toISOString().split('T')[0],
       weight: 5.5,
       weightUnit: 'kg',
       height: 58,
@@ -63,7 +75,10 @@ describe('Growth Tracker API Endpoints', () => {
       notes: 'Checkup measurement',
     };
 
-    const response: GrowthEntry = await apiPost(`/profiles/${testProfileId}/trackers/growth`, entryData);
+    const response: GrowthEntry = await apiPost(
+      `/profiles/${testProfileId}/trackers/growth`,
+      entryData
+    );
 
     expect(response).toBeDefined();
     expect(response.entryId).toMatch(/^growth_/);
@@ -74,7 +89,7 @@ describe('Growth Tracker API Endpoints', () => {
     expect(response.weightUnit).toBe(entryData.weightUnit);
     expect(response.height).toBe(entryData.height);
     expect(response.heightUnit).toBe(entryData.heightUnit);
-    expect(response.headCircumference).toBeUndefined(); 
+    expect(response.headCircumference).toBeUndefined();
     expect(response.notes).toBe(entryData.notes);
     expect(response.createdAt).toBeDefined();
 
@@ -82,15 +97,20 @@ describe('Growth Tracker API Endpoints', () => {
   });
 
   test('GET /profiles/{profileId}/trackers/growth - should retrieve growth entries for the profile', async () => {
-     if (!testProfileId || !createdEntryId) throw new Error('Test setup failed: testProfileId or createdEntryId is null.');
+    if (!testProfileId || !createdEntryId)
+      throw new Error(
+        'Test setup failed: testProfileId or createdEntryId is null.'
+      );
 
-    const response: GrowthEntry[] = await apiGet(`/profiles/${testProfileId}/trackers/growth`);
+    const response: GrowthEntry[] = await apiGet(
+      `/profiles/${testProfileId}/trackers/growth`
+    );
 
     expect(response).toBeDefined();
     expect(Array.isArray(response)).toBe(true);
     expect(response.length).toBeGreaterThanOrEqual(1);
 
-    const foundEntry = response.find(e => e.entryId === createdEntryId);
+    const foundEntry = response.find((e) => e.entryId === createdEntryId);
     expect(foundEntry).toBeDefined();
     expect(foundEntry?.babyId).toBe(testProfileId);
     expect(foundEntry?.trackerType).toBe('growth');
@@ -101,16 +121,21 @@ describe('Growth Tracker API Endpoints', () => {
   // TODO: Add PUT test for updating an entry if needed
 
   test('DELETE /profiles/{profileId}/trackers/growth/{entryId} - should delete the growth entry', async () => {
-    if (!testProfileId || !createdEntryId) throw new Error('Test setup failed: testProfileId or createdEntryId is null.');
+    if (!testProfileId || !createdEntryId)
+      throw new Error(
+        'Test setup failed: testProfileId or createdEntryId is null.'
+      );
 
-    await apiDelete(`/profiles/${testProfileId}/trackers/growth/${createdEntryId}`);
+    await apiDelete(
+      `/profiles/${testProfileId}/trackers/growth/${createdEntryId}`
+    );
 
-    
-    const getResponse: GrowthEntry[] = await apiGet(`/profiles/${testProfileId}/trackers/growth`);
-    const deletedEntry = getResponse.find(e => e.entryId === createdEntryId);
+    const getResponse: GrowthEntry[] = await apiGet(
+      `/profiles/${testProfileId}/trackers/growth`
+    );
+    const deletedEntry = getResponse.find((e) => e.entryId === createdEntryId);
     expect(deletedEntry).toBeUndefined();
 
     createdEntryId = null;
   });
-
 });
