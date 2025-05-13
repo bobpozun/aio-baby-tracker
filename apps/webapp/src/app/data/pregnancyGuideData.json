@@ -1,0 +1,305 @@
+[
+  {
+    "week": 4,
+    "babySizeText": "poppy seed",
+    "babyImagePlaceholder": "poppy_seed.svg",
+    "developmentDetails": ["Neural tube forming.", "Heart begins to beat."]
+  },
+  {
+    "week": 5,
+    "babySizeText": "sesame seed",
+    "babyImagePlaceholder": "sesame_seed.svg",
+    "developmentDetails": [
+      "Major organs begin to develop.",
+      "Facial features start to form."
+    ]
+  },
+  {
+    "week": 6,
+    "babySizeText": "lentil",
+    "babyImagePlaceholder": "lentil.svg",
+    "developmentDetails": [
+      "Nose, mouth, and ears taking shape.",
+      "Heartbeat detectable by ultrasound."
+    ]
+  },
+  {
+    "week": 7,
+    "babySizeText": "blueberry",
+    "babyImagePlaceholder": "blueberry.svg",
+    "developmentDetails": [
+      "Hands and feet emerging.",
+      "Brain developing rapidly."
+    ]
+  },
+  {
+    "week": 8,
+    "babySizeText": "raspberry",
+    "babyImagePlaceholder": "raspberry.svg",
+    "developmentDetails": [
+      "Fingers and toes developing.",
+      "Facial features becoming distinct."
+    ]
+  },
+  {
+    "week": 9,
+    "babySizeText": "grape",
+    "babyImagePlaceholder": "grape.svg",
+    "developmentDetails": [
+      "Essential organs continue to grow.",
+      "Tiny muscles allow first movements."
+    ]
+  },
+  {
+    "week": 10,
+    "babySizeText": "kumquat",
+    "babyImagePlaceholder": "kumquat.svg",
+    "developmentDetails": [
+      "Vital organs functioning.",
+      "Fingernails and toenails forming."
+    ]
+  },
+  {
+    "week": 11,
+    "babySizeText": "fig",
+    "babyImagePlaceholder": "fig.svg",
+    "developmentDetails": [
+      "Baby is almost fully formed.",
+      "Diaphragm developing."
+    ]
+  },
+  {
+    "week": 12,
+    "babySizeText": "lime",
+    "babyImagePlaceholder": "lime.svg",
+    "developmentDetails": ["Vital organs fully formed.", "Can make fists."]
+  },
+  {
+    "week": 13,
+    "babySizeText": "pea pod",
+    "babyImagePlaceholder": "pea_pod.svg",
+    "developmentDetails": [
+      "Fingerprints have formed.",
+      "Vocal cords developing."
+    ]
+  },
+  {
+    "week": 14,
+    "babySizeText": "lemon",
+    "babyImagePlaceholder": "lemon.svg",
+    "developmentDetails": [
+      "Kidneys producing urine.",
+      "Lanugo (fine hair) covers the body."
+    ]
+  },
+  {
+    "week": 15,
+    "babySizeText": "apple",
+    "babyImagePlaceholder": "apple.svg",
+    "developmentDetails": ["Skeleton developing bones.", "Can sense light."]
+  },
+  {
+    "week": 16,
+    "babySizeText": "avocado",
+    "babyImagePlaceholder": "avocado.svg",
+    "developmentDetails": ["Skeleton hardening.", "Eyes can move."]
+  },
+  {
+    "week": 17,
+    "babySizeText": "turnip",
+    "babyImagePlaceholder": "turnip.svg",
+    "developmentDetails": [
+      "Fat stores accumulating.",
+      "Hearing becoming more acute."
+    ]
+  },
+  {
+    "week": 18,
+    "babySizeText": "bell pepper",
+    "babyImagePlaceholder": "bell_pepper.svg",
+    "developmentDetails": [
+      "Digestive system starting to work.",
+      "Can yawn and hiccup."
+    ]
+  },
+  {
+    "week": 19,
+    "babySizeText": "heirloom tomato",
+    "babyImagePlaceholder": "tomato.svg",
+    "developmentDetails": [
+      "Vernix caseosa covers skin.",
+      "Sensory development quickens."
+    ]
+  },
+  {
+    "week": 20,
+    "babySizeText": "banana",
+    "babyImagePlaceholder": "banana.svg",
+    "developmentDetails": ["Can hear sounds.", "Covered in vernix."]
+  },
+  {
+    "week": 21,
+    "babySizeText": "carrot",
+    "babyImagePlaceholder": "carrot.svg",
+    "developmentDetails": [
+      "Can swallow amniotic fluid.",
+      "Eyebrows and eyelids present."
+    ]
+  },
+  {
+    "week": 22,
+    "babySizeText": "spaghetti squash",
+    "babyImagePlaceholder": "spaghetti_squash.svg",
+    "developmentDetails": ["Hair visible on head.", "Lips distinct."]
+  },
+  {
+    "week": 23,
+    "babySizeText": "large mango",
+    "babyImagePlaceholder": "mango.svg",
+    "developmentDetails": [
+      "Sense of motion developed.",
+      "Footprints and fingerprints forming."
+    ]
+  },
+  {
+    "week": 24,
+    "babySizeText": "ear of corn",
+    "babyImagePlaceholder": "corn.svg",
+    "developmentDetails": [
+      "Lungs developing surfactant.",
+      "Taste buds forming."
+    ]
+  },
+  {
+    "week": 25,
+    "babySizeText": "rutabaga",
+    "babyImagePlaceholder": "rutabaga.svg",
+    "developmentDetails": [
+      "Responding to familiar sounds.",
+      "Skin becoming less transparent."
+    ]
+  },
+  {
+    "week": 26,
+    "babySizeText": "scallion",
+    "babyImagePlaceholder": "scallion.svg",
+    "developmentDetails": [
+      "Eyes open and blink.",
+      "Nerve pathways forming in ears."
+    ]
+  },
+  {
+    "week": 27,
+    "babySizeText": "head of cauliflower",
+    "babyImagePlaceholder": "cauliflower.svg",
+    "developmentDetails": [
+      "Brain continues rapid growth.",
+      "Practicing breathing movements."
+    ]
+  },
+  {
+    "week": 28,
+    "babySizeText": "large eggplant",
+    "babyImagePlaceholder": "eggplant.svg",
+    "developmentDetails": [
+      "Developing sleep cycles.",
+      "Can perceive light changes."
+    ]
+  },
+  {
+    "week": 29,
+    "babySizeText": "butternut squash",
+    "babyImagePlaceholder": "butternut_squash.svg",
+    "developmentDetails": [
+      "Bones fully developed but soft.",
+      "Muscles maturing."
+    ]
+  },
+  {
+    "week": 30,
+    "babySizeText": "large cabbage",
+    "babyImagePlaceholder": "cabbage.svg",
+    "developmentDetails": [
+      "Eyes open most of the time.",
+      "Red blood cells forming in bone marrow."
+    ]
+  },
+  {
+    "week": 31,
+    "babySizeText": "coconut",
+    "babyImagePlaceholder": "coconut.svg",
+    "developmentDetails": [
+      "Can process information, track light.",
+      "Gaining weight rapidly."
+    ]
+  },
+  {
+    "week": 32,
+    "babySizeText": "jicama",
+    "babyImagePlaceholder": "jicama.svg",
+    "developmentDetails": ["Toenails visible.", "Practicing breathing."]
+  },
+  {
+    "week": 33,
+    "babySizeText": "pineapple",
+    "babyImagePlaceholder": "pineapple.svg",
+    "developmentDetails": [
+      "Detecting light, pupils constrict/dilate.",
+      "Skin less wrinkled."
+    ]
+  },
+  {
+    "week": 34,
+    "babySizeText": "cantaloupe",
+    "babyImagePlaceholder": "cantaloupe.svg",
+    "developmentDetails": [
+      "Lungs nearly fully developed.",
+      "Central nervous system maturing."
+    ]
+  },
+  {
+    "week": 35,
+    "babySizeText": "honeydew melon",
+    "babyImagePlaceholder": "honeydew.svg",
+    "developmentDetails": ["Rapid weight gain.", "Kidneys fully developed."]
+  },
+  {
+    "week": 36,
+    "babySizeText": "head of romaine lettuce",
+    "babyImagePlaceholder": "romaine.svg",
+    "developmentDetails": [
+      "Shedding lanugo and vernix.",
+      "Dropping lower into pelvis."
+    ]
+  },
+  {
+    "week": 37,
+    "babySizeText": "swiss chard",
+    "babyImagePlaceholder": "swiss_chard.svg",
+    "developmentDetails": [
+      "Considered early term.",
+      "Practicing inhaling/exhaling."
+    ]
+  },
+  {
+    "week": 38,
+    "babySizeText": "leek",
+    "babyImagePlaceholder": "leek.svg",
+    "developmentDetails": [
+      "Brain weighs about 14 ounces.",
+      "Grasping reflex developed."
+    ]
+  },
+  {
+    "week": 39,
+    "babySizeText": "small watermelon",
+    "babyImagePlaceholder": "watermelon.svg",
+    "developmentDetails": ["Considered full term.", "Chest prominent."]
+  },
+  {
+    "week": 40,
+    "babySizeText": "small pumpkin",
+    "babyImagePlaceholder": "pumpkin.svg",
+    "developmentDetails": ["Fully developed.", "Ready for birth!"]
+  }
+]
